@@ -1,6 +1,6 @@
 {
   "name": "@supacommerce/utils",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Shared utilities for supacommerce — currency helpers, error types, pagination, Result type",
   "license": "MIT",
   "type": "module",
@@ -14,7 +14,9 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },

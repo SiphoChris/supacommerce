@@ -1,13 +1,15 @@
 {
   "name": "@supacommerce/cli",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "CLI for supacommerce — initialise your ecommerce backend with one command",
   "license": "MIT",
   "type": "module",
   "bin": {
     "supacommerce": "./dist/cli.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },
