@@ -5,17 +5,17 @@ The `init` command for supacommerce. Copies schemas, edge functions, and SQL fil
 ## Usage
 
 ```bash
-npx supacommerce init
+npx @supacommerce/cli init
 ```
 
 Or with options:
 
 ```bash
 # Target a specific directory
-npx supacommerce init --dir ./my-project
+npx @supacommerce/cli init --dir ./my-project
 
 # Skip the confirmation prompt
-npx supacommerce init --skip-confirmation
+npx @supacommerce/cli init --skip-confirmation
 ```
 
 ## What it copies

@@ -21,7 +21,7 @@ A pnpm monorepo containing three packages:
 ## Quickstart
 
 ```bash
-npx supacommerce init
+npx @supacommerce/cli init
 ```
 
 That's it. The CLI copies the following into your project:
@@ -41,7 +41,7 @@ From that point on, all files are yours. Read them. Modify them. Delete what you
 ### 1. The CLI copies files into your project
 
 ```bash
-npx supacommerce init
+npx @supacommerce/cli init
 ```
 
 The CLI detects whether you already have a `src/` directory and places files appropriately. It warns you before overwriting anything.

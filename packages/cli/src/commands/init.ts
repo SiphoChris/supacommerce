@@ -117,7 +117,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
 
   if (!fs.existsSync(TEMPLATES_DIR)) {
     console.error(chalk.red("  Error: templates directory not found at " + TEMPLATES_DIR))
-    console.error(chalk.dim("  This is a build issue. Please report it at https://github.com/supacommerce/supacommerce"))
+    console.error(chalk.dim("  This is a build issue. Please report it at https://github.com/SiphoChris/supacommerce.git"))
     process.exit(1)
   }
 
