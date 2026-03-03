@@ -1,6 +1,6 @@
 {
   "name": "@supacommerce/core",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Typed ecommerce query client for Supabase — the supacommerce core",
   "license": "MIT",
   "type": "module",
