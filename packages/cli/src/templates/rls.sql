@@ -778,14 +778,27 @@ create policy "sales_channel_products_admin_write"
 
 
 -- =============================================================================
--- admin_users — admins only
+-- admin_users — self select to avoid RLS recursion deadlock, admin write
+--
+-- IMPORTANT: is_admin() queries admin_users, so a policy of "admin only" on
+-- admin_users would cause infinite recursion. The fix is to allow every
+-- authenticated user to read their own row unconditionally (breaking the
+-- cycle), while restricting all other operations to confirmed admins.
 -- =============================================================================
 
-create policy "admin_users_admin_only"
+-- Every authenticated user can read their own admin_users row.
+-- This is what allows is_admin() to resolve without recursing.
+create policy "admin_users_select_self"
+  on public.admin_users for select
+  using (user_id = auth.uid());
+
+-- Only confirmed admins can insert, update, delete, or read other admins' rows.
+create policy "admin_users_admin_write"
   on public.admin_users for all
   using (public.is_admin())
   with check (public.is_admin());
 
+-- Invitations follow the same pattern — admins only.
 create policy "admin_invitations_admin_only"
   on public.admin_invitations for all
   using (public.is_admin())
