@@ -6,9 +6,9 @@ import ora from "ora"
 import { fileURLToPath } from "url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-// __dirname = dist/commands/ at runtime
-// templates were copied to dist/templates/ by tsup onSuccess
-const PACKAGE_DIST_DIR = path.resolve(__dirname, "..")
+// // __dirname = dist/commands/ at runtime
+// // templates were copied to dist/templates/ by tsup onSuccess
+// const PACKAGE_DIST_DIR = path.resolve(__dirname, "..")
 
 export interface InitOptions {
   dir: string
@@ -113,7 +113,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
   // ── 2. Resolve templates directory ────────────────────────────────────────
 // init.ts compiles to dist/commands/init.js → __dirname = dist/commands/
   // Templates were copied by tsup.config.ts onSuccess to dist/templates/
-  const TEMPLATES_DIR = path.join(PACKAGE_DIST_DIR, "templates")
+  const TEMPLATES_DIR = path.join(__dirname, "templates")
 
   if (!fs.existsSync(TEMPLATES_DIR)) {
     console.error(chalk.red("  Error: templates directory not found at " + TEMPLATES_DIR))
