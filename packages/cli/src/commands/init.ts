@@ -199,6 +199,16 @@ export async function initCommand(options: InitOptions): Promise<void> {
       dest: path.join(projectDir, "supabase", "functions.sql"),
       description: "Postgres RPC functions (transactional operations)",
     },
+    {
+      src: path.join(TEMPLATES_DIR, "nuke-dbs.sql"),
+      dest: path.join(projectDir, "supabase", "nuke-dbs.sql"),
+      description: "SQL script to nuke databases",
+    },
+    {
+      src: path.join(TEMPLATES_DIR, "nuke-policies.sql"),
+      dest: path.join(projectDir, "supabase", "nuke-policies.sql"),
+      description: "SQL script to nuke RLS policies",
+    },
 
     // Drizzle config example
     {
