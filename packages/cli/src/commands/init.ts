@@ -209,6 +209,11 @@ export async function initCommand(options: InitOptions): Promise<void> {
       dest: path.join(projectDir, "supabase", "nuke-policies.sql"),
       description: "SQL script to nuke RLS policies",
     },
+    {
+      src: path.join(TEMPLATES_DIR, "drop-dbs.sql"),
+      dest: path.join(projectDir, "supabase", "drop-dbs.sql"),
+      description: "SQL script to drop databases",
+    },
 
     // Drizzle config example
     {
