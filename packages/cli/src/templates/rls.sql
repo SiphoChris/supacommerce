@@ -16,6 +16,8 @@
 --   - Admins are identified by the is_admin() helper function below
 --   - Public read is granted where appropriate (products, categories, etc.)
 --   - All write operations require authentication
+--   - Admins and customers are completely separate personas — an admin signup
+--     does NOT create a customers row
 -- =============================================================================
 
 
@@ -23,7 +25,7 @@
 -- Helper functions
 -- =============================================================================
 
--- Returns true if the current user has an admin_users record.
+-- Returns true if the current user has an active admin_users record.
 -- Used by policies that allow admin-only access.
 create or replace function public.is_admin()
 returns boolean
@@ -42,7 +44,7 @@ as $$
 $$;
 
 -- Returns the customers.id for the currently authenticated user.
--- Returns null for unauthenticated requests.
+-- Returns null for unauthenticated requests or admin users.
 create or replace function public.current_customer_id()
 returns uuid
 language sql
@@ -62,6 +64,11 @@ $$;
 -- =============================================================================
 -- When a user signs up (including signInAnonymously()), automatically
 -- create a customers row linked to their auth.users record.
+--
+-- IMPORTANT: Admin invitees sign up via the accept-invite page but must NOT
+-- get a customers row — they are staff, not shoppers. We detect this by
+-- checking for a pending invitation matching their email and skipping the
+-- customer insert in that case.
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -70,6 +77,16 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- Skip customer creation for admin invitees
+  if exists (
+    select 1 from public.admin_invitations
+    where email = new.email
+      and accepted_at is null
+      and expires_at > now()
+  ) then
+    return new;
+  end if;
+
   insert into public.customers (user_id, email, is_anonymous)
   values (
     new.id,
@@ -91,59 +108,59 @@ create trigger on_auth_user_created
 -- Enable RLS on all tables
 -- =============================================================================
 
-alter table public.currencies            enable row level security;
-alter table public.regions               enable row level security;
-alter table public.countries             enable row level security;
-alter table public.customers             enable row level security;
-alter table public.customer_groups       enable row level security;
-alter table public.customer_addresses    enable row level security;
-alter table public.products              enable row level security;
-alter table public.product_categories    enable row level security;
-alter table public.product_category_products enable row level security;
-alter table public.product_collections   enable row level security;
-alter table public.product_collection_products enable row level security;
-alter table public.product_tags          enable row level security;
-alter table public.product_tag_products  enable row level security;
-alter table public.product_options       enable row level security;
-alter table public.product_option_values enable row level security;
-alter table public.product_variants      enable row level security;
+alter table public.currencies                    enable row level security;
+alter table public.regions                       enable row level security;
+alter table public.countries                     enable row level security;
+alter table public.customers                     enable row level security;
+alter table public.customer_groups               enable row level security;
+alter table public.customer_addresses            enable row level security;
+alter table public.products                      enable row level security;
+alter table public.product_categories            enable row level security;
+alter table public.product_category_products     enable row level security;
+alter table public.product_collections           enable row level security;
+alter table public.product_collection_products   enable row level security;
+alter table public.product_tags                  enable row level security;
+alter table public.product_tag_products          enable row level security;
+alter table public.product_options               enable row level security;
+alter table public.product_option_values         enable row level security;
+alter table public.product_variants              enable row level security;
 alter table public.product_variant_option_values enable row level security;
-alter table public.product_images        enable row level security;
-alter table public.stock_locations       enable row level security;
-alter table public.inventory_items       enable row level security;
-alter table public.inventory_levels      enable row level security;
-alter table public.inventory_reservations enable row level security;
-alter table public.price_sets            enable row level security;
-alter table public.prices                enable row level security;
-alter table public.price_lists           enable row level security;
-alter table public.price_list_customer_groups enable row level security;
-alter table public.price_list_prices     enable row level security;
-alter table public.promotions            enable row level security;
-alter table public.promotion_rules       enable row level security;
-alter table public.promotion_usages      enable row level security;
-alter table public.tax_regions           enable row level security;
-alter table public.tax_rates             enable row level security;
-alter table public.tax_rate_product_categories enable row level security;
-alter table public.shipping_profiles     enable row level security;
-alter table public.fulfillment_providers enable row level security;
-alter table public.shipping_options      enable row level security;
-alter table public.shipping_option_requirements enable row level security;
-alter table public.carts                 enable row level security;
-alter table public.cart_line_items       enable row level security;
-alter table public.cart_shipping_methods enable row level security;
-alter table public.orders                enable row level security;
-alter table public.order_line_items      enable row level security;
-alter table public.order_fulfillments    enable row level security;
-alter table public.order_fulfillment_items enable row level security;
-alter table public.order_returns         enable row level security;
-alter table public.order_return_items    enable row level security;
-alter table public.order_refunds         enable row level security;
-alter table public.payment_collections   enable row level security;
-alter table public.payment_sessions      enable row level security;
-alter table public.sales_channels        enable row level security;
-alter table public.sales_channel_products enable row level security;
-alter table public.admin_users           enable row level security;
-alter table public.admin_invitations     enable row level security;
+alter table public.product_images                enable row level security;
+alter table public.stock_locations               enable row level security;
+alter table public.inventory_items               enable row level security;
+alter table public.inventory_levels              enable row level security;
+alter table public.inventory_reservations        enable row level security;
+alter table public.price_sets                    enable row level security;
+alter table public.prices                        enable row level security;
+alter table public.price_lists                   enable row level security;
+alter table public.price_list_customer_groups    enable row level security;
+alter table public.price_list_prices             enable row level security;
+alter table public.promotions                    enable row level security;
+alter table public.promotion_rules               enable row level security;
+alter table public.promotion_usages              enable row level security;
+alter table public.tax_regions                   enable row level security;
+alter table public.tax_rates                     enable row level security;
+alter table public.tax_rate_product_categories   enable row level security;
+alter table public.shipping_profiles             enable row level security;
+alter table public.fulfillment_providers         enable row level security;
+alter table public.shipping_options              enable row level security;
+alter table public.shipping_option_requirements  enable row level security;
+alter table public.carts                         enable row level security;
+alter table public.cart_line_items               enable row level security;
+alter table public.cart_shipping_methods         enable row level security;
+alter table public.orders                        enable row level security;
+alter table public.order_line_items              enable row level security;
+alter table public.order_fulfillments            enable row level security;
+alter table public.order_fulfillment_items       enable row level security;
+alter table public.order_returns                 enable row level security;
+alter table public.order_return_items            enable row level security;
+alter table public.order_refunds                 enable row level security;
+alter table public.payment_collections           enable row level security;
+alter table public.payment_sessions              enable row level security;
+alter table public.sales_channels                enable row level security;
+alter table public.sales_channel_products        enable row level security;
+alter table public.admin_users                   enable row level security;
+alter table public.admin_invitations             enable row level security;
 
 
 -- =============================================================================
@@ -184,7 +201,9 @@ create policy "countries_admin_write"
 
 
 -- =============================================================================
--- customers — own data only, admin can read all
+-- customers — own data only, admin can read/write all
+-- Admins are NOT customers. Admin signups skip customer row creation (see
+-- handle_new_user trigger above).
 -- =============================================================================
 
 create policy "customers_select_own"
@@ -200,7 +219,7 @@ create policy "customers_update_own"
   using (user_id = auth.uid() or public.is_admin())
   with check (user_id = auth.uid() or public.is_admin());
 
--- Soft delete only — no hard delete policy for customers
+-- Soft delete only — no hard delete policy for customers.
 -- Use the admin service role to hard-delete if needed.
 
 
@@ -242,7 +261,7 @@ create policy "customer_addresses_delete_own"
 
 -- =============================================================================
 -- catalog — products, variants, categories, etc.
--- Public read for published products. Admin write.
+-- Public read for published products. Admin full write access.
 -- =============================================================================
 
 create policy "products_public_read"
@@ -402,7 +421,7 @@ create policy "inventory_reservations_admin_only"
 
 
 -- =============================================================================
--- pricing — public read
+-- pricing — public read, admin write
 -- =============================================================================
 
 create policy "price_sets_public_read"
@@ -458,9 +477,7 @@ create policy "price_list_prices_admin_write"
 create policy "promotions_authenticated_read"
   on public.promotions for select
   using (
-    auth.uid() is not null
-    and status = 'active'
-    and deleted_at is null
+    (auth.uid() is not null and status = 'active' and deleted_at is null)
     or public.is_admin()
   );
 
@@ -486,7 +503,7 @@ create policy "promotion_usages_own_read"
 
 
 -- =============================================================================
--- tax — public read
+-- tax — public read, admin write
 -- =============================================================================
 
 create policy "tax_regions_public_read"
@@ -541,7 +558,7 @@ create policy "fulfillment_providers_admin_write"
 
 create policy "shipping_options_public_read"
   on public.shipping_options for select
-  using (is_active = true and deleted_at is null or public.is_admin());
+  using ((is_active = true and deleted_at is null) or public.is_admin());
 
 create policy "shipping_options_admin_write"
   on public.shipping_options for all
@@ -760,7 +777,7 @@ create policy "payment_sessions_select_own"
 
 create policy "sales_channels_public_read"
   on public.sales_channels for select
-  using (is_disabled = false and deleted_at is null or public.is_admin());
+  using ((is_disabled = false and deleted_at is null) or public.is_admin());
 
 create policy "sales_channels_admin_write"
   on public.sales_channels for all
@@ -778,12 +795,15 @@ create policy "sales_channel_products_admin_write"
 
 
 -- =============================================================================
--- admin_users — self select to avoid RLS recursion deadlock, admin write
+-- admin_users — self select to avoid RLS recursion deadlock, admin write,
+--               invitation-based insert
 --
--- IMPORTANT: is_admin() queries admin_users, so a policy of "admin only" on
--- admin_users would cause infinite recursion. The fix is to allow every
--- authenticated user to read their own row unconditionally (breaking the
--- cycle), while restricting all other operations to confirmed admins.
+-- IMPORTANT: is_admin() queries admin_users, so a blanket "admin only" policy
+-- on admin_users would cause infinite recursion. The fix is:
+--   1. Allow every authenticated user to SELECT their own row (breaks the cycle)
+--   2. Allow confirmed admins to do everything else
+--   3. Allow a newly invited user to INSERT their own row if a valid pending
+--      invitation exists for their email (the accept-invite flow)
 -- =============================================================================
 
 -- Every authenticated user can read their own admin_users row.
@@ -792,14 +812,65 @@ create policy "admin_users_select_self"
   on public.admin_users for select
   using (user_id = auth.uid());
 
--- Only confirmed admins can insert, update, delete, or read other admins' rows.
+-- Confirmed admins can update, delete, and read all admin_users rows.
 create policy "admin_users_admin_write"
   on public.admin_users for all
   using (public.is_admin())
   with check (public.is_admin());
 
--- Invitations follow the same pattern — admins only.
+-- A newly signed-up user can insert their own admin_users row only if a valid
+-- pending invitation exists for their email. This is the sole entry point for
+-- non-admins to write to this table — used exclusively by the accept-invite page.
+create policy "admin_users_insert_via_invitation"
+  on public.admin_users for insert
+  to authenticated
+  with check (
+    user_id = auth.uid()
+    and exists (
+      select 1 from public.admin_invitations
+      where email = (select email from auth.users where id = auth.uid())
+        and accepted_at is null
+        and expires_at > now()
+    )
+  );
+
+
+-- =============================================================================
+-- admin_invitations — admin write, anonymous token lookup, self-accept
+--
+-- Three separate policies:
+--   1. Admins can do everything (create, read, update, delete invitations)
+--   2. Anonymous users can look up a pending non-expired invitation by token
+--      (required for the accept-invite page before the user has an account)
+--   3. A newly authenticated user can stamp accepted_at on their own invitation
+--      (they are authenticated at this point but not yet an admin)
+-- =============================================================================
+
+-- Admins can read, create, update and delete all invitations.
 create policy "admin_invitations_admin_only"
   on public.admin_invitations for all
   using (public.is_admin())
   with check (public.is_admin());
+
+-- Anonymous users can look up a pending, non-expired invitation by token.
+-- Required for the accept-invite page which runs before the user has an account.
+create policy "admin_invitations_anon_token_lookup"
+  on public.admin_invitations for select
+  to anon
+  using (
+    accepted_at is null
+    and expires_at > now()
+  );
+
+-- A newly authenticated user (not yet an admin) can update their own invitation
+-- to stamp accepted_at. This runs after signUp but before the admin_users row
+-- is created, so is_admin() would return false — hence the separate policy.
+create policy "admin_invitations_accept_own"
+  on public.admin_invitations for update
+  to authenticated
+  using (
+    email = (select email from auth.users where id = auth.uid())
+    and accepted_at is null
+    and expires_at > now()
+  )
+  with check (true);

@@ -64,12 +64,14 @@ your-project/
 ## After running init
 
 1. **Install dependencies**
+
    ```bash
    pnpm add drizzle-orm @supabase/supabase-js @supacommerce/core
    pnpm add -D drizzle-kit
    ```
 
 2. **Configure Drizzle**
+
    ```bash
    mv drizzle.config.example.ts drizzle.config.ts
    # Add DATABASE_URL to your .env
@@ -80,16 +82,52 @@ your-project/
    supabase start
    ```
 
+## We recommend putting these scripts in your `package.json`:
+
+```json
+{
+  "scripts": {
+    "dev": "...",
+    "build": "...",
+    "preview": "...",
+
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+
+    "supabase:login": "supabase login",
+    "supabase:link": "supabase link",
+    "supabase:start": "supabase start",
+    "db:push:remote": "supabase db push",
+    "db:pull:remote": "supabase db pull",
+    "db:reset": "supabase db reset",
+    "db:new": "supabase migration new",
+
+    "db:sync": "pnpm db:generate && pnpm db:push:remote"
+  }
+}
+```
+
 4. **Generate and apply migrations**
+
    ```bash
    pnpm db:generate
-   supabase db push
+   pnpm db:migrate OR pnpm db:push:remote
    ```
 
 5. **Apply RLS and Postgres functions**
    - Open the Supabase SQL Editor
-   - Run `supabase/rls.sql`
+   - Apply RLS policies (rls.sql)
    - Run `supabase/functions.sql`
+
+6. **Create first admin user**
+   SUPABASE_URL=https://xxx.supabase.co \
+   SUPABASE_SERVICE_ROLE_KEY=your-key \
+   ADMIN_EMAIL=you@example.com \
+   ADMIN_PASSWORD=yourpassword \
+   ADMIN_FIRST_NAME=Your \
+   ADMIN_LAST_NAME=Name \
+   pnpm seed:admin
 
 ## License
 

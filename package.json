@@ -12,7 +12,18 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "clean": "pnpm -r clean && rm -rf node_modules",
-    "publish:all": "pnpm publish -r --access public"
+    "publish:all": "pnpm publish -r --access public",
+
+    "install:dashboard": "pnpm install --filter dashboard",
+    "dev:dashboard": "pnpm --filter dashboard dev",
+    "build:dashboard": "pnpm --filter dashboard build",
+    "preview:dashboard": "pnpm --filter dashboard serve",
+    "type-check:dashboard": "pnpm --filter dashboard type-check",
+    "lint:dashboard": "pnpm --filter dashboard lint",
+    "format:dashboard": "pnpm --filter dashboard format",
+    "add:dashboard": "pnpm add --filter dashboard",
+    "remove:dashboard": "pnpm remove --filter dashboard",
+    "exec:dashboard": "pnpm --filter dashboard exec"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

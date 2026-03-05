@@ -1,5 +1,5 @@
-import { supabaseAdmin } from "../_shared/supabaseAdmin.ts"
-import { handleCors, jsonResponse, errorResponse } from "../_shared/cors.ts"
+import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { handleCors, jsonResponse, errorResponse } from "../_shared/cors.ts";
 
 /**
  * payment-webhook
@@ -26,12 +26,12 @@ import { handleCors, jsonResponse, errorResponse } from "../_shared/cors.ts"
  */
 
 Deno.serve(async (req: Request) => {
-  const preflight = handleCors(req)
-  if (preflight) return preflight
+  const preflight = handleCors(req);
+  if (preflight) return preflight;
 
   try {
-    const body = await req.text()
-    const signature = req.headers.get("stripe-signature") ?? ""
+    const body = await req.text();
+    const signature = req.headers.get("stripe-signature") ?? "";
 
     // ── 1. Verify webhook signature ──────────────────────────────────────────
     // TODO: uncomment and implement signature verification for your provider.
@@ -54,36 +54,42 @@ Deno.serve(async (req: Request) => {
 
     // For development only — parse body without verification
     // REMOVE THIS in production and use the verified event above
-    const event = JSON.parse(body) as { type: string; data: { object: Record<string, unknown> } }
+    if (Deno.env.get("ENVIRONMENT") !== "development") {
+      return errorResponse(
+        "Webhook signature verification not implemented",
+        500,
+      );
+    }
+    const event = JSON.parse(body);
 
     // ── 2. Handle event types ────────────────────────────────────────────────
     switch (event.type) {
       case "payment_intent.succeeded": {
         // Stripe: extract metadata from the PaymentIntent
-        const paymentIntent = event.data.object
-        const providerSessionId = paymentIntent["id"] as string
+        const paymentIntent = event.data.object;
+        const providerSessionId = paymentIntent["id"] as string;
 
         // Find the payment session by provider session ID
         const { data: session, error: sessionError } = await supabaseAdmin
           .from("payment_sessions")
           .select("id, payment_collection_id, payment_collections(order_id)")
           .eq("provider_session_id", providerSessionId)
-          .single()
+          .single();
 
         if (sessionError || !session) {
-          console.error("Payment session not found for:", providerSessionId)
+          console.error("Payment session not found for:", providerSessionId);
           // Return 200 so the provider doesn't retry indefinitely
-          return jsonResponse({ received: true })
+          return jsonResponse({ received: true });
         }
 
         const orderId = (
           session as unknown as {
-            payment_collections: { order_id: string }
+            payment_collections: { order_id: string };
           }
-        ).payment_collections.order_id
+        ).payment_collections.order_id;
 
         // ── 3. Call order-confirmed ─────────────────────────────────────────
-        const confirmUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/order-confirmed`
+        const confirmUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/order-confirmed`;
         const confirmResponse = await fetch(confirmUrl, {
           method: "POST",
           headers: {
@@ -94,15 +100,15 @@ Deno.serve(async (req: Request) => {
             orderId,
             paymentSessionId: session.id,
           }),
-        })
+        });
 
         if (!confirmResponse.ok) {
-          const errorText = await confirmResponse.text()
-          console.error("order-confirmed failed:", errorText)
-          return errorResponse("Failed to confirm order", 500)
+          const errorText = await confirmResponse.text();
+          console.error("order-confirmed failed:", errorText);
+          return errorResponse("Failed to confirm order", 500);
         }
 
-        break
+        break;
       }
 
       case "payment_intent.payment_failed": {
@@ -112,28 +118,31 @@ Deno.serve(async (req: Request) => {
         //   - Release any inventory reservations
         //   - Notify the customer
         //
-        const paymentIntent = event.data.object
-        const providerSessionId = paymentIntent["id"] as string
+        const paymentIntent = event.data.object;
+        const providerSessionId = paymentIntent["id"] as string;
 
         await supabaseAdmin
           .from("payment_sessions")
           .update({ status: "error", updated_at: new Date().toISOString() })
-          .eq("provider_session_id", providerSessionId)
+          .eq("provider_session_id", providerSessionId);
 
-        break
+        break;
       }
 
       default:
         // Unhandled event — acknowledge receipt and ignore
-        console.log("Unhandled webhook event type:", event.type)
+        console.log("Unhandled webhook event type:", event.type);
     }
 
     // Always return 200 to acknowledge receipt
-    return jsonResponse({ received: true })
+    return jsonResponse({ received: true });
   } catch (err) {
-    console.error("payment-webhook error:", err)
+    console.error("payment-webhook error:", err);
     // Return 200 for unexpected errors to prevent infinite retries
     // Log and investigate separately
-    return jsonResponse({ received: true, error: "Internal error — check logs" })
+    return jsonResponse({
+      received: true,
+      error: "Internal error — check logs",
+    });
   }
-})
+});
