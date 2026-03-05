@@ -4,7 +4,6 @@ import {
   varchar,
   boolean,
   timestamp,
-  pgEnum,
 } from "drizzle-orm/pg-core"
 import { currencies } from "./currencies.ts"
 
@@ -24,10 +23,16 @@ export const regions = pgTable("regions", {
     .notNull()
     .references(() => currencies.code),
 
-  /** IANA timezone string — e.g. "America/New_York" */
+  /**
+   * Legacy display-only tax rate for the region — stored as a string,
+   * e.g. "0.20" or "20". This is NOT used for tax calculations.
+   *
+   * For actual tax calculation use TaxClient.calculate() which reads
+   * from the tax_regions / tax_rates tables and returns a numeric rate.
+   */
   taxRate: varchar("tax_rate", { length: 10 }).notNull().default("0"),
 
-  /** Whether prices in this region are tax-inclusive */
+  /** Whether prices in this region are tax-inclusive (e.g. VAT-inclusive in EU) */
   taxIncluded: boolean("tax_included").notNull().default(false),
 
   isActive: boolean("is_active").notNull().default(true),

@@ -9,11 +9,11 @@ import {
   text,
   pgEnum,
   index,
-} from "drizzle-orm/pg-core"
-import { customers } from "./customers.ts"
-import { regions } from "./regions.ts"
-import { currencies } from "./currencies.ts"
-import { productVariants } from "./catalog.ts"
+} from "drizzle-orm/pg-core";
+import { customers } from "./customers.ts";
+import { regions } from "./regions.ts";
+import { currencies } from "./currencies.ts";
+import { productVariants, products } from "./catalog.ts";
 
 export const orderStatusEnum = pgEnum("order_status", [
   "pending",
@@ -21,7 +21,7 @@ export const orderStatusEnum = pgEnum("order_status", [
   "completed",
   "cancelled",
   "requires_action",
-])
+]);
 
 export const orderPaymentStatusEnum = pgEnum("order_payment_status", [
   "pending",
@@ -31,7 +31,7 @@ export const orderPaymentStatusEnum = pgEnum("order_payment_status", [
   "refunded",
   "cancelled",
   "requires_action",
-])
+]);
 
 export const orderFulfillmentStatusEnum = pgEnum("order_fulfillment_status", [
   "not_fulfilled",
@@ -43,14 +43,14 @@ export const orderFulfillmentStatusEnum = pgEnum("order_fulfillment_status", [
   "returned",
   "cancelled",
   "requires_action",
-])
+]);
 
 export const returnStatusEnum = pgEnum("return_status", [
   "requested",
   "received",
   "requires_action",
   "cancelled",
-])
+]);
 
 export const refundReasonEnum = pgEnum("refund_reason", [
   "discount",
@@ -58,7 +58,7 @@ export const refundReasonEnum = pgEnum("refund_reason", [
   "swap",
   "claim",
   "other",
-])
+]);
 
 /**
  * orders
@@ -77,13 +77,19 @@ export const orders = pgTable(
       onDelete: "set null",
     }),
     cartId: uuid("cart_id"),
-    regionId: uuid("region_id").references(() => regions.id, { onDelete: "set null" }),
-    currencyCode: varchar("currency_code", { length: 3 }).references(() => currencies.code),
+    regionId: uuid("region_id").references(() => regions.id, {
+      onDelete: "set null",
+    }),
+    currencyCode: varchar("currency_code", { length: 3 }).references(
+      () => currencies.code,
+    ),
 
     email: varchar("email", { length: 255 }).notNull(),
 
     status: orderStatusEnum("status").notNull().default("pending"),
-    paymentStatus: orderPaymentStatusEnum("payment_status").notNull().default("pending"),
+    paymentStatus: orderPaymentStatusEnum("payment_status")
+      .notNull()
+      .default("pending"),
     fulfillmentStatus: orderFulfillmentStatusEnum("fulfillment_status")
       .notNull()
       .default("not_fulfilled"),
@@ -102,20 +108,27 @@ export const orders = pgTable(
 
     metadata: jsonb("metadata"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     index("orders_customer_id_idx").on(t.customerId),
     index("orders_status_idx").on(t.status),
     index("orders_display_id_idx").on(t.displayId),
-  ]
-)
+  ],
+);
 
 /**
  * order_line_items
  *
  * Copied from cart_line_items at checkout. Immutable after creation.
+ *
+ * variantId and productId use onDelete: "set null" — the historical
+ * record must survive even if the product is later deleted from the catalog.
  */
 export const orderLineItems = pgTable(
   "order_line_items",
@@ -124,14 +137,20 @@ export const orderLineItems = pgTable(
     orderId: uuid("order_id")
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
+
+    /** Set null if variant is deleted — title/price snapshot preserves the record */
     variantId: uuid("variant_id").references(() => productVariants.id, {
+      onDelete: "set null",
+    }),
+
+    /** Set null if product is deleted — title snapshot preserves the record */
+    productId: uuid("product_id").references(() => products.id, {
       onDelete: "set null",
     }),
 
     title: varchar("title", { length: 255 }).notNull(),
     subtitle: varchar("subtitle", { length: 255 }),
     thumbnail: text("thumbnail"),
-    productId: uuid("product_id"),
 
     quantity: integer("quantity").notNull(),
     fulfilledQuantity: integer("fulfilled_quantity").notNull().default(0),
@@ -147,11 +166,15 @@ export const orderLineItems = pgTable(
     isGiftcard: boolean("is_giftcard").notNull().default(false),
 
     metadata: jsonb("metadata"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (t) => [index("order_line_items_order_id_idx").on(t.orderId)]
-)
+  (t) => [index("order_line_items_order_id_idx").on(t.orderId)],
+);
 
 /**
  * order_fulfillments
@@ -179,11 +202,15 @@ export const orderFulfillments = pgTable(
 
     shippedAt: timestamp("shipped_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (t) => [index("order_fulfillments_order_id_idx").on(t.orderId)]
-)
+  (t) => [index("order_fulfillments_order_id_idx").on(t.orderId)],
+);
 
 /**
  * order_fulfillment_items
@@ -198,7 +225,7 @@ export const orderFulfillmentItems = pgTable("order_fulfillment_items", {
     .notNull()
     .references(() => orderLineItems.id, { onDelete: "cascade" }),
   quantity: integer("quantity").notNull(),
-})
+});
 
 /**
  * order_returns
@@ -221,11 +248,15 @@ export const orderReturns = pgTable(
 
     metadata: jsonb("metadata"),
     receivedAt: timestamp("received_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (t) => [index("order_returns_order_id_idx").on(t.orderId)]
-)
+  (t) => [index("order_returns_order_id_idx").on(t.orderId)],
+);
 
 /**
  * order_return_items
@@ -240,7 +271,7 @@ export const orderReturnItems = pgTable("order_return_items", {
   quantity: integer("quantity").notNull(),
   note: text("note"),
   isRequested: boolean("is_requested").notNull().default(true),
-})
+});
 
 /**
  * order_refunds
@@ -256,15 +287,19 @@ export const orderRefunds = pgTable(
     reason: refundReasonEnum("reason"),
     note: text("note"),
     paymentId: uuid("payment_id"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (t) => [index("order_refunds_order_id_idx").on(t.orderId)]
-)
+  (t) => [index("order_refunds_order_id_idx").on(t.orderId)],
+);
 
-export type Order = typeof orders.$inferSelect
-export type NewOrder = typeof orders.$inferInsert
-export type OrderLineItem = typeof orderLineItems.$inferSelect
-export type OrderFulfillment = typeof orderFulfillments.$inferSelect
-export type OrderReturn = typeof orderReturns.$inferSelect
-export type OrderRefund = typeof orderRefunds.$inferSelect
+export type Order = typeof orders.$inferSelect;
+export type NewOrder = typeof orders.$inferInsert;
+export type OrderLineItem = typeof orderLineItems.$inferSelect;
+export type OrderFulfillment = typeof orderFulfillments.$inferSelect;
+export type OrderReturn = typeof orderReturns.$inferSelect;
+export type OrderRefund = typeof orderRefunds.$inferSelect;

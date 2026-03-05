@@ -1,6 +1,6 @@
 {
   "name": "@supacommerce/cli",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "CLI for supacommerce — initialise your ecommerce backend with one command",
   "license": "MIT",
   "type": "module",

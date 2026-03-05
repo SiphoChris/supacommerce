@@ -2,12 +2,33 @@ import {
   pgTable,
   uuid,
   varchar,
+  text,
   boolean,
   timestamp,
-  text,
   jsonb,
   index,
-} from "drizzle-orm/pg-core"
+} from "drizzle-orm/pg-core";
+
+/**
+ * customer_groups
+ *
+ * Groups for segmentation — B2B pricing tiers, loyalty programs, VIP access.
+ * Assign a customer to a group via customers.group_id.
+ *
+ * Defined first to avoid circular reference with customers.groupId FK.
+ */
+export const customerGroups = pgTable("customer_groups", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
 /**
  * customers
@@ -56,33 +77,30 @@ export const customers = pgTable(
 
     isAnonymous: boolean("is_anonymous").notNull().default(false),
 
-    /** Optional: group membership for B2B / loyalty tiers */
-    groupId: uuid("group_id"),
+    /**
+     * Optional group membership for B2B / loyalty tiers.
+     * FK to customer_groups — set null if the group is deleted.
+     */
+    groupId: uuid("group_id").references(() => customerGroups.id, {
+      onDelete: "set null",
+    }),
 
     /** Arbitrary metadata — store provider-specific IDs (Stripe customer ID, etc.) */
     metadata: jsonb("metadata"),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
-  (t) => [index("customers_user_id_idx").on(t.userId), index("customers_email_idx").on(t.email)]
-)
-
-/**
- * customer_groups
- *
- * Groups for segmentation — B2B pricing tiers, loyalty programs, VIP access.
- * Assign a customer to a group via customers.group_id.
- */
-export const customerGroups = pgTable("customer_groups", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 100 }).notNull(),
-  description: text("description"),
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-})
+  (t) => [
+    index("customers_user_id_idx").on(t.userId),
+    index("customers_email_idx").on(t.email),
+  ],
+);
 
 /**
  * customer_addresses
@@ -112,14 +130,18 @@ export const customerAddresses = pgTable(
     phone: varchar("phone", { length: 30 }),
     isDefault: boolean("is_default").notNull().default(false),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (t) => [index("customer_addresses_customer_id_idx").on(t.customerId)]
-)
+  (t) => [index("customer_addresses_customer_id_idx").on(t.customerId)],
+);
 
-export type Customer = typeof customers.$inferSelect
-export type NewCustomer = typeof customers.$inferInsert
-export type CustomerGroup = typeof customerGroups.$inferSelect
-export type CustomerAddress = typeof customerAddresses.$inferSelect
-export type NewCustomerAddress = typeof customerAddresses.$inferInsert
+export type Customer = typeof customers.$inferSelect;
+export type NewCustomer = typeof customers.$inferInsert;
+export type CustomerGroup = typeof customerGroups.$inferSelect;
+export type CustomerAddress = typeof customerAddresses.$inferSelect;
+export type NewCustomerAddress = typeof customerAddresses.$inferInsert;

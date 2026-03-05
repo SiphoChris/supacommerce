@@ -13,7 +13,7 @@ import {
 import { customers } from "./customers.ts"
 import { regions } from "./regions.ts"
 import { currencies } from "./currencies.ts"
-import { productVariants } from "./catalog.ts"
+import { productVariants, products } from "./catalog.ts"
 import { shippingOptions } from "./fulfillment.ts"
 
 export const cartStatusEnum = pgEnum("cart_status", [
@@ -38,6 +38,11 @@ export const cartStatusEnum = pgEnum("cart_status", [
  *   3. No FK constraints needed — simpler schema
  *
  * All monetary amounts are integers in the smallest currency unit.
+ *
+ * Note: subtotal, shippingTotal, discountTotal, taxTotal, and total are
+ * written by the checkout edge function at completion time. Before checkout,
+ * these values are computed live by the SDK from line items and shipping
+ * methods — do not rely on the DB columns for pre-checkout display totals.
  */
 export const carts = pgTable(
   "carts",
@@ -58,7 +63,12 @@ export const carts = pgTable(
     /** Applied promotion codes (array of code strings) */
     promotionCodes: jsonb("promotion_codes").$type<string[]>().default([]),
 
-    /** Totals — computed by the checkout edge function */
+    /**
+     * Totals — written by the checkout edge function at completion time.
+     * Pre-checkout, the SDK computes these live from line items.
+     * Do not read these columns for cart display — use commerce.cart.get()
+     * which returns computed values from the SDK mapper.
+     */
     subtotal: integer("subtotal").notNull().default(0),
     discountTotal: integer("discount_total").notNull().default(0),
     shippingTotal: integer("shipping_total").notNull().default(0),
@@ -83,6 +93,10 @@ export const carts = pgTable(
  * Each line item represents a variant + quantity in the cart.
  * unit_price is snapshotted at the time the item is added so that
  * price changes don't silently affect an open cart.
+ *
+ * productId and variantId use onDelete: "set null" — the cart line item
+ * must survive even if the product or variant is deleted, so the customer
+ * can still complete checkout or see what they had in their cart.
  */
 export const cartLineItems = pgTable(
   "cart_line_items",
@@ -91,7 +105,14 @@ export const cartLineItems = pgTable(
     cartId: uuid("cart_id")
       .notNull()
       .references(() => carts.id, { onDelete: "cascade" }),
+
+    /** Set null if variant is deleted */
     variantId: uuid("variant_id").references(() => productVariants.id, {
+      onDelete: "set null",
+    }),
+
+    /** Set null if product is deleted */
+    productId: uuid("product_id").references(() => products.id, {
       onDelete: "set null",
     }),
 
@@ -99,7 +120,6 @@ export const cartLineItems = pgTable(
     title: varchar("title", { length: 255 }).notNull(),
     subtitle: varchar("subtitle", { length: 255 }),
     thumbnail: text("thumbnail"),
-    productId: uuid("product_id"),
 
     quantity: integer("quantity").notNull().default(1),
 

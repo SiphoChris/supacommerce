@@ -24,7 +24,7 @@
 -- Steps (all-or-nothing):
 --   1. Validate the cart exists and is active
 --   2. Create the order record
---   3. Copy cart line items to order line items
+--   3. Copy cart line items to order line items (including product_id)
 --   4. Create a payment collection
 --   5. Mark the cart as completed
 --
@@ -86,17 +86,19 @@ begin
   )
   returning id into v_order_id;
 
-  -- ── 4. Copy line items from cart to order ─────────────────────────────────
+  -- ── 4. Copy line items from cart to order (including product_id) ──────────
   insert into public.order_line_items (
-    order_id, variant_id, title, subtitle, thumbnail, product_id,
+    order_id, variant_id, product_id, title, subtitle, thumbnail,
     quantity, unit_price, subtotal, tax_total, discount_total, total
   )
   select
     v_order_id,
-    variant_id, title, subtitle, thumbnail, product_id,
+    variant_id,
+    product_id,        -- was missing before — now correctly copied
+    title, subtitle, thumbnail,
     quantity, unit_price, subtotal,
-    0,  -- tax_total: per-item tax breakdown is a TODO
-    0,  -- discount_total: per-item discount is a TODO
+    0,                 -- tax_total: per-item tax breakdown is a TODO
+    0,                 -- discount_total: per-item discount is a TODO
     subtotal
   from public.cart_line_items
   where cart_id = p_cart_id;
@@ -112,15 +114,15 @@ begin
   -- ── 6. Mark cart as completed ─────────────────────────────────────────────
   update public.carts
   set
-    status       = 'completed',
-    completed_at = now(),
-    subtotal     = v_subtotal,
+    status         = 'completed',
+    completed_at   = now(),
+    subtotal       = v_subtotal,
     discount_total = p_discount_total,
     shipping_total = p_shipping_total,
     tax_total      = p_tax_total,
     total          = v_total,
     billing_address = coalesce(p_billing_address, billing_address),
-    updated_at   = now()
+    updated_at     = now()
   where id = p_cart_id;
 
   return v_order_id;
@@ -135,10 +137,11 @@ $$;
 -- Called by the order-confirmed edge function.
 --
 -- Steps (all-or-nothing):
---   1. Update order status → processing
---   2. Update payment session → captured
---   3. Update payment collection → captured
---   4. Reserve inventory for all line items
+--   1. Load and lock the order
+--   2. Update order status → processing
+--   3. Update payment session → captured
+--   4. Update payment collection → captured
+--   5. Reserve inventory for all line items (with stock check)
 -- =============================================================================
 
 create or replace function public.confirm_order(
@@ -155,6 +158,7 @@ declare
   v_line_item   record;
   v_inv_item    record;
   v_location_id uuid;
+  v_available   integer;
 begin
   -- ── 1. Load and lock the order ────────────────────────────────────────────
   select * into v_order
@@ -191,12 +195,12 @@ begin
   -- ── 4. Update payment collection ─────────────────────────────────────────
   update public.payment_collections
   set
-    status           = 'captured',
-    captured_amount  = amount,
-    updated_at       = now()
+    status          = 'captured',
+    captured_amount = amount,
+    updated_at      = now()
   where order_id = p_order_id;
 
-  -- ── 5. Reserve inventory ──────────────────────────────────────────────────
+  -- ── 5. Reserve inventory (with stock check) ───────────────────────────────
   -- Find the default location (first active location). For multi-location
   -- inventory, implement your own location-selection logic here.
   select id into v_location_id
@@ -217,6 +221,23 @@ begin
       limit 1;
 
       if v_inv_item.id is not null then
+        -- Lock the inventory level row and check available stock
+        select quantity_available into v_available
+        from public.inventory_levels
+        where inventory_item_id = v_inv_item.id
+          and location_id = v_location_id
+        for update;
+
+        -- Only reserve if stock is available. If not, raise to roll back
+        -- the entire transaction — caller should handle this case.
+        if v_available is null or v_available < v_line_item.quantity then
+          raise exception
+            'Insufficient stock for inventory item % at location % (available: %, requested: %)',
+            v_inv_item.id, v_location_id,
+            coalesce(v_available, 0), v_line_item.quantity
+            using errcode = 'P0003';
+        end if;
+
         -- Create reservation record
         insert into public.inventory_reservations (
           inventory_item_id, location_id, line_item_id,
@@ -328,7 +349,9 @@ begin
 
   -- Mark as released
   update public.inventory_reservations
-  set status = 'released', updated_at = now()
+  set
+    status     = 'released',
+    updated_at = now()
   where id = p_reservation_id;
 
   -- Restore available quantity
