@@ -100,37 +100,23 @@ export function AcceptInvitePage() {
     setError(null);
 
     try {
-      // 1. Create Supabase Auth account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: invitation.email,
-        password,
-        options: {
-          data: { first_name: firstName, last_name: lastName },
+      // Delegate everything to the edge function.
+      // It uses the service role key so it bypasses RLS entirely —
+      // no orphaned auth users, no role-based insert failures.
+      const { data, error: fnError } = await supabase.functions.invoke(
+        "admin-accept-invite",
+        {
+          body: {
+            token: invitation.token,
+            firstName,
+            lastName,
+            password,
+          },
         },
-      });
+      );
 
-      if (authError) throw new Error(authError.message);
-      if (!authData.user) throw new Error("Failed to create account.");
-
-      // 2. Insert admin_users row
-      const { error: insertError } = await supabase.from("admin_users").insert({
-        user_id: authData.user.id,
-        email: invitation.email,
-        first_name: firstName,
-        last_name: lastName,
-        role: invitation.role,
-        is_active: true,
-      });
-
-      if (insertError) throw new Error(insertError.message);
-
-      // 3. Stamp accepted_at on the invitation
-      const { error: updateError } = await supabase
-        .from("admin_invitations")
-        .update({ accepted_at: new Date().toISOString() })
-        .eq("id", invitation.id);
-
-      if (updateError) throw new Error(updateError.message);
+      if (fnError) throw new Error(fnError.message);
+      if (!data?.success) throw new Error("Unexpected response from server.");
 
       setStep("success");
     } catch (err: unknown) {

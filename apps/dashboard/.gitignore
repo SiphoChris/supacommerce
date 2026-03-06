@@ -1,24 +1,43 @@
-# Logs
-logs
-*.log
+# Dependencies
+node_modules
+
+# Build artifacts
+/build
+/dist
+/out
+# If you have specific output directories configured in tsconfig.json (e.g., "outDir": "./dist"), list them here.
+
+# TypeScript output files (if not in a specific build dir)
+*.js
+*.js.map
+*.d.ts
+# Uncomment the above lines ONLY if the generated JS/JS maps/declaration files are NOT generated into one of the above build artifact directories. 
+# It is standard practice to ignore build artifacts.
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs and debug files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Editor and OS files
+.DS_Store           # macOS
+.vscode/            # VS Code configuration (optional, depending on project standards)
+*.suo               # Visual Studio
+*.ntvs*             # Visual Studio
+*.njsproj           # Visual Studio
+*.sln               # Visual Studio
+*.vssscc            # Visual Studio
+.idea/              # WebStorm/IntelliJ
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Optional: Coverage directory from testing tools
+coverage

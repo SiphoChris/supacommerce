@@ -414,8 +414,29 @@ export function AdminInvitationCreate() {
     token: generateToken(),
   });
 
+  const mutationOptions = {
+    onSuccess: async (data: Record<string, unknown>) => {
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        await fetch(`${supabaseUrl}/functions/v1/admin-send-invite`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ invitationId: data.id }),
+        });
+      } catch (err) {
+        // Non-fatal — invitation was created, email just didn't send.
+        // Admin can resend manually.
+        console.error("Failed to send invite email:", err);
+      }
+    },
+  };
+
   return (
-    <Create transform={transform}>
+    <Create transform={transform} mutationOptions={mutationOptions}>
       <SimpleForm>
         <TextInput source="email" type="email" required />
         <SelectInput source="role" choices={ADMIN_ROLE} defaultValue="viewer" />
