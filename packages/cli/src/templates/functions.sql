@@ -375,3 +375,30 @@ begin
     and location_id = v_reservation.location_id;
 end;
 $$;
+
+
+-- =============================================================================
+-- increment_promotion_usage
+--
+-- Atomically increments usage_count on a promotion by 1.
+-- Called by cart-checkout after recording a promotion_usage row.
+-- A dedicated RPC ensures the increment is a single atomic UPDATE
+-- rather than a read-modify-write in application code.
+-- =============================================================================
+
+create or replace function public.increment_promotion_usage(
+  p_promotion_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.promotions
+  set
+    usage_count = usage_count + 1,
+    updated_at  = now()
+  where id = p_promotion_id;
+end;
+$$;
