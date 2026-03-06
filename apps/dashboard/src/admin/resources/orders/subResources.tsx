@@ -6,6 +6,7 @@ import {
   Show,
   TabbedShowLayout,
   ReferenceManyField,
+  ReferenceField,
   NumberField,
   Edit,
   Create,
@@ -18,6 +19,7 @@ import {
   FilterButton,
   ExportButton,
   CreateButton,
+  DateTimeInput,
 } from "react-admin";
 import {
   StatusChipField,
@@ -27,7 +29,6 @@ import {
 } from "../shared";
 
 // ─── Order Fulfillments ───────────────────────────────────────────────────────
-// Fulfillments are created by admins to record dispatched shipments.
 
 export function OrderFulfillmentList() {
   return (
@@ -41,7 +42,9 @@ export function OrderFulfillmentList() {
       }
     >
       <Datagrid rowClick="show" bulkActionButtons={false}>
-        <TextField source="order_id" label="Order" />
+        <ReferenceField source="order_id" reference="orders" link="show">
+          <TextField source="display_id" label="Order #" />
+        </ReferenceField>
         <TextField source="provider_id" label="Provider" />
         <TextField source="tracking_number" />
         <DateField source="shipped_at" showTime />
@@ -57,7 +60,9 @@ export function OrderFulfillmentShow() {
     <Show>
       <TabbedShowLayout>
         <TabbedShowLayout.Tab label="Details">
-          <TextField source="order_id" />
+          <ReferenceField source="order_id" reference="orders" link="show">
+            <TextField source="display_id" label="Order #" />
+          </ReferenceField>
           <TextField source="provider_id" />
           <TextField source="tracking_number" />
           <TextField source="tracking_url" />
@@ -72,7 +77,14 @@ export function OrderFulfillmentShow() {
             label={false}
           >
             <Datagrid bulkActionButtons={false}>
-              <TextField source="line_item_id" />
+              <ReferenceField
+                source="line_item_id"
+                reference="order_line_items"
+                link={false}
+                emptyText="—"
+              >
+                <TextField source="title" label="Item" />
+              </ReferenceField>
               <NumberField source="quantity" />
             </Datagrid>
           </ReferenceManyField>
@@ -86,6 +98,9 @@ export function OrderFulfillmentEdit() {
   return (
     <Edit>
       <SimpleForm>
+        <ReferenceField source="order_id" reference="orders" link={false}>
+          <TextField source="display_id" label="Order #" />
+        </ReferenceField>
         <TextInput source="tracking_number" />
         <TextInput source="tracking_url" />
         <TextInput source="provider_id" />
@@ -99,9 +114,13 @@ export function OrderFulfillmentCreate() {
     <Create>
       <SimpleForm>
         <ReferenceInput source="order_id" reference="orders">
-          <AutocompleteInput optionText="email" />
+          <AutocompleteInput
+            optionText={(r) => (r ? `#${r.display_id} — ${r.email}` : "")}
+            label="Order"
+            required
+          />
         </ReferenceInput>
-        <TextInput source="provider_id" />
+        <TextInput source="provider_id" helperText="e.g. paxi, manual" />
         <TextInput source="tracking_number" />
         <TextInput source="tracking_url" />
       </SimpleForm>
@@ -110,7 +129,6 @@ export function OrderFulfillmentCreate() {
 }
 
 // ─── Order Returns ────────────────────────────────────────────────────────────
-// Returns are created by admins to record customer return requests.
 
 const returnFilters = [<SelectInput source="status" choices={RETURN_STATUS} />];
 
@@ -128,7 +146,9 @@ export function OrderReturnList() {
       }
     >
       <Datagrid rowClick="show" bulkActionButtons={false}>
-        <TextField source="order_id" label="Order" />
+        <ReferenceField source="order_id" reference="orders" link="show">
+          <TextField source="display_id" label="Order #" />
+        </ReferenceField>
         <StatusChipField source="status" />
         <CentsField source="refund_amount" />
         <CentsField source="shipping_total" />
@@ -144,7 +164,9 @@ export function OrderReturnShow() {
     <Show>
       <TabbedShowLayout>
         <TabbedShowLayout.Tab label="Details">
-          <TextField source="order_id" />
+          <ReferenceField source="order_id" reference="orders" link="show">
+            <TextField source="display_id" label="Order #" />
+          </ReferenceField>
           <StatusChipField source="status" />
           <CentsField source="refund_amount" />
           <CentsField source="shipping_total" />
@@ -158,7 +180,14 @@ export function OrderReturnShow() {
             label={false}
           >
             <Datagrid bulkActionButtons={false}>
-              <TextField source="line_item_id" />
+              <ReferenceField
+                source="line_item_id"
+                reference="order_line_items"
+                link={false}
+                emptyText="—"
+              >
+                <TextField source="title" label="Item" />
+              </ReferenceField>
               <NumberField source="quantity" />
               <TextField source="note" />
             </Datagrid>
@@ -173,12 +202,11 @@ export function OrderReturnEdit() {
   return (
     <Edit>
       <SimpleForm>
+        <ReferenceField source="order_id" reference="orders" link={false}>
+          <TextField source="display_id" label="Order #" />
+        </ReferenceField>
         <SelectInput source="status" choices={RETURN_STATUS} />
-        <TextInput
-          source="received_at"
-          type="datetime-local"
-          label="Received At"
-        />
+        <DateTimeInput source="received_at" label="Received At" />
       </SimpleForm>
     </Edit>
   );
@@ -189,7 +217,11 @@ export function OrderReturnCreate() {
     <Create>
       <SimpleForm>
         <ReferenceInput source="order_id" reference="orders">
-          <AutocompleteInput optionText="email" />
+          <AutocompleteInput
+            optionText={(r) => (r ? `#${r.display_id} — ${r.email}` : "")}
+            label="Order"
+            required
+          />
         </ReferenceInput>
         <SelectInput
           source="status"
@@ -202,7 +234,6 @@ export function OrderReturnCreate() {
 }
 
 // ─── Order Refunds ────────────────────────────────────────────────────────────
-// Refunds are created manually by admins.
 
 const refundFilters = [<SelectInput source="reason" choices={REFUND_REASON} />];
 
@@ -220,7 +251,9 @@ export function OrderRefundList() {
       }
     >
       <Datagrid rowClick="show" bulkActionButtons={false}>
-        <TextField source="order_id" label="Order" />
+        <ReferenceField source="order_id" reference="orders" link="show">
+          <TextField source="display_id" label="Order #" />
+        </ReferenceField>
         <CentsField source="amount" />
         <StatusChipField source="reason" />
         <TextField source="note" />
@@ -235,7 +268,9 @@ export function OrderRefundShow() {
     <Show>
       <TabbedShowLayout>
         <TabbedShowLayout.Tab label="Details">
-          <TextField source="order_id" />
+          <ReferenceField source="order_id" reference="orders" link="show">
+            <TextField source="display_id" label="Order #" />
+          </ReferenceField>
           <CentsField source="amount" />
           <StatusChipField source="reason" />
           <TextField source="note" />
@@ -251,10 +286,19 @@ export function OrderRefundCreate() {
     <Create>
       <SimpleForm>
         <ReferenceInput source="order_id" reference="orders">
-          <AutocompleteInput optionText="email" />
+          <AutocompleteInput
+            optionText={(r) => (r ? `#${r.display_id} — ${r.email}` : "")}
+            label="Order"
+            required
+          />
         </ReferenceInput>
-        <TextInput source="amount" label="Amount (cents)" />
-        <SelectInput source="reason" choices={REFUND_REASON} />
+        <NumberInput
+          source="amount"
+          label="Amount (cents)"
+          helperText="e.g. 1099 = R10.99"
+          required
+        />
+        <SelectInput source="reason" choices={REFUND_REASON} required />
         <TextInput source="note" multiline />
       </SimpleForm>
     </Create>

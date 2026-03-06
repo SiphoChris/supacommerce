@@ -10,6 +10,7 @@ import {
   Show,
   TabbedShowLayout,
   ReferenceManyField,
+  ReferenceField,
   Edit,
   SimpleForm,
 } from "react-admin";
@@ -24,7 +25,6 @@ import {
 
 const collectionFilters = [
   <SelectInput source="status" choices={PAYMENT_COLLECTION_STATUS} />,
-  <TextField source="currency_code" />,
 ];
 
 export function PaymentCollectionList() {
@@ -40,13 +40,15 @@ export function PaymentCollectionList() {
       sort={{ field: "created_at", order: "DESC" }}
     >
       <Datagrid rowClick="show" bulkActionButtons={false}>
-        <TextField source="order_id" label="Order" />
+        <ReferenceField source="order_id" reference="orders" link="show">
+          <TextField source="display_id" label="Order #" />
+        </ReferenceField>
         <StatusChipField source="status" />
         <TextField source="currency_code" label="Currency" />
-        <CentsField source="amount" />
-        <CentsField source="authorized_amount" />
-        <CentsField source="captured_amount" />
-        <CentsField source="refunded_amount" />
+        <CentsField source="amount" currencySource="currency_code" />
+        <CentsField source="authorized_amount" currencySource="currency_code" />
+        <CentsField source="captured_amount" currencySource="currency_code" />
+        <CentsField source="refunded_amount" currencySource="currency_code" />
         <DateField source="created_at" showTime />
       </Datagrid>
     </List>
@@ -58,13 +60,18 @@ export function PaymentCollectionShow() {
     <Show>
       <TabbedShowLayout>
         <TabbedShowLayout.Tab label="Details">
-          <TextField source="order_id" />
+          <ReferenceField source="order_id" reference="orders" link="show">
+            <TextField source="display_id" label="Order #" />
+          </ReferenceField>
           <StatusChipField source="status" />
           <TextField source="currency_code" />
-          <CentsField source="amount" />
-          <CentsField source="authorized_amount" />
-          <CentsField source="captured_amount" />
-          <CentsField source="refunded_amount" />
+          <CentsField source="amount" currencySource="currency_code" />
+          <CentsField
+            source="authorized_amount"
+            currencySource="currency_code"
+          />
+          <CentsField source="captured_amount" currencySource="currency_code" />
+          <CentsField source="refunded_amount" currencySource="currency_code" />
           <DateField source="created_at" showTime />
           <DateField source="updated_at" showTime />
         </TabbedShowLayout.Tab>
@@ -77,7 +84,7 @@ export function PaymentCollectionShow() {
             <Datagrid bulkActionButtons={false} rowClick="show">
               <TextField source="provider_id" label="Provider" />
               <StatusChipField source="status" />
-              <CentsField source="amount" />
+              <CentsField source="amount" currencySource="currency_code" />
               <TextField source="currency_code" />
               <DateField source="authorized_at" showTime />
               <DateField source="captured_at" showTime />
@@ -118,9 +125,18 @@ export function PaymentSessionList() {
       sort={{ field: "created_at", order: "DESC" }}
     >
       <Datagrid rowClick="show" bulkActionButtons={false}>
+        <ReferenceField
+          source="payment_collection_id"
+          reference="payment_collections"
+          link="show"
+        >
+          <ReferenceField source="order_id" reference="orders" link={false}>
+            <TextField source="display_id" label="Order #" />
+          </ReferenceField>
+        </ReferenceField>
         <TextField source="provider_id" label="Provider" />
         <StatusChipField source="status" />
-        <CentsField source="amount" />
+        <CentsField source="amount" currencySource="currency_code" />
         <TextField source="currency_code" />
         <DateField source="authorized_at" showTime />
         <DateField source="captured_at" showTime />
@@ -136,11 +152,19 @@ export function PaymentSessionShow() {
     <Show>
       <TabbedShowLayout>
         <TabbedShowLayout.Tab label="Details">
-          <TextField source="payment_collection_id" />
+          <ReferenceField
+            source="payment_collection_id"
+            reference="payment_collections"
+            link="show"
+          >
+            <ReferenceField source="order_id" reference="orders" link="show">
+              <TextField source="display_id" label="Order #" />
+            </ReferenceField>
+          </ReferenceField>
           <TextField source="provider_id" />
           <TextField source="provider_session_id" />
           <StatusChipField source="status" />
-          <CentsField source="amount" />
+          <CentsField source="amount" currencySource="currency_code" />
           <TextField source="currency_code" />
           <DateField source="authorized_at" showTime />
           <DateField source="captured_at" showTime />

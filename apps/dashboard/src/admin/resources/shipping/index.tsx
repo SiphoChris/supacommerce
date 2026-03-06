@@ -13,6 +13,8 @@ import {
   ExportButton,
   Show,
   SimpleShowLayout,
+  ReferenceManyField,
+  ReferenceField,
   Edit,
   Create,
   SimpleForm,
@@ -52,7 +54,17 @@ export function ShippingOptionList() {
     >
       <Datagrid rowClick="show" bulkActionButtons={false}>
         <TextField source="name" />
-        <TextField source="region_id" label="Region" />
+        <ReferenceField source="region_id" reference="regions" link="show">
+          <TextField source="name" label="Region" />
+        </ReferenceField>
+        <ReferenceField
+          source="profile_id"
+          reference="shipping_profiles"
+          link="show"
+          emptyText="—"
+        >
+          <TextField source="name" label="Profile" />
+        </ReferenceField>
         <StatusChipField source="type" />
         <CentsField source="amount" />
         <BooleanField source="is_active" label="Active" />
@@ -68,9 +80,25 @@ export function ShippingOptionShow() {
     <Show>
       <SimpleShowLayout>
         <TextField source="name" />
-        <TextField source="region_id" />
-        <TextField source="profile_id" />
-        <TextField source="provider_id" />
+        <ReferenceField source="region_id" reference="regions" link="show">
+          <TextField source="name" label="Region" />
+        </ReferenceField>
+        <ReferenceField
+          source="profile_id"
+          reference="shipping_profiles"
+          link="show"
+          emptyText="—"
+        >
+          <TextField source="name" label="Profile" />
+        </ReferenceField>
+        <ReferenceField
+          source="provider_id"
+          reference="fulfillment_providers"
+          link="show"
+          emptyText="—"
+        >
+          <TextField source="id" label="Provider" />
+        </ReferenceField>
         <StatusChipField source="type" />
         <CentsField source="amount" />
         <BooleanField source="is_active" />
@@ -90,8 +118,31 @@ export function ShippingOptionEdit() {
         <ReferenceInput source="region_id" reference="regions">
           <AutocompleteInput optionText="name" required />
         </ReferenceInput>
+        <ReferenceInput
+          source="profile_id"
+          reference="shipping_profiles"
+          allowEmpty
+        >
+          <AutocompleteInput
+            optionText="name"
+            label="Shipping Profile (optional)"
+          />
+        </ReferenceInput>
+        <ReferenceInput
+          source="provider_id"
+          reference="fulfillment_providers"
+          allowEmpty
+        >
+          <AutocompleteInput
+            optionText="id"
+            label="Fulfillment Provider (optional)"
+          />
+        </ReferenceInput>
         <SelectInput source="type" choices={SHIPPING_OPTION_TYPE} />
-        <NumberInput source="amount" helperText="In cents" />
+        <NumberInput
+          source="amount"
+          helperText="In cents, e.g. 5000 = R50.00"
+        />
         <BooleanInput source="is_active" />
         <BooleanInput source="is_return" />
       </SimpleForm>
@@ -107,12 +158,36 @@ export function ShippingOptionCreate() {
         <ReferenceInput source="region_id" reference="regions">
           <AutocompleteInput optionText="name" required />
         </ReferenceInput>
+        <ReferenceInput
+          source="profile_id"
+          reference="shipping_profiles"
+          allowEmpty
+        >
+          <AutocompleteInput
+            optionText="name"
+            label="Shipping Profile (optional)"
+          />
+        </ReferenceInput>
+        <ReferenceInput
+          source="provider_id"
+          reference="fulfillment_providers"
+          allowEmpty
+        >
+          <AutocompleteInput
+            optionText="id"
+            label="Fulfillment Provider (optional)"
+          />
+        </ReferenceInput>
         <SelectInput
           source="type"
           choices={SHIPPING_OPTION_TYPE}
           defaultValue="flat_rate"
         />
-        <NumberInput source="amount" helperText="In cents" defaultValue={0} />
+        <NumberInput
+          source="amount"
+          helperText="In cents, e.g. 5000 = R50.00"
+          defaultValue={0}
+        />
         <BooleanInput source="is_active" defaultValue={true} />
         <BooleanInput source="is_return" defaultValue={false} />
       </SimpleForm>
@@ -229,7 +304,12 @@ export function FulfillmentProviderCreate() {
   return (
     <Create>
       <SimpleForm>
-        <TextInput source="id" label="Provider ID" required />
+        <TextInput
+          source="id"
+          label="Provider ID"
+          required
+          helperText="e.g. paxi, manual"
+        />
         <BooleanInput source="is_installed" defaultValue={true} />
       </SimpleForm>
     </Create>

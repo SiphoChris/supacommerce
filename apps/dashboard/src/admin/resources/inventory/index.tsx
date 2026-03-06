@@ -15,6 +15,7 @@ import {
   TabbedShowLayout,
   ReferenceManyField,
   SimpleShowLayout,
+  ReferenceField,
   Edit,
   Create,
   SimpleForm,
@@ -47,7 +48,14 @@ export function InventoryItemList() {
       <Datagrid rowClick="show" bulkActionButtons={false}>
         <TextField source="sku" />
         <TextField source="description" />
-        <TextField source="variant_id" label="Variant" />
+        <ReferenceField
+          source="variant_id"
+          reference="product_variants"
+          link="show"
+          emptyText="—"
+        >
+          <TextField source="title" />
+        </ReferenceField>
         <BooleanField source="requires_shipping" />
         <DateField source="created_at" showTime />
       </Datagrid>
@@ -62,7 +70,14 @@ export function InventoryItemShow() {
         <TabbedShowLayout.Tab label="Details">
           <TextField source="sku" />
           <TextField source="description" />
-          <TextField source="variant_id" />
+          <ReferenceField
+            source="variant_id"
+            reference="product_variants"
+            link="show"
+            emptyText="—"
+          >
+            <TextField source="title" label="Variant" />
+          </ReferenceField>
           <BooleanField source="requires_shipping" />
           <NumberField source="weight" />
           <NumberField source="length" />
@@ -78,7 +93,13 @@ export function InventoryItemShow() {
             label={false}
           >
             <Datagrid bulkActionButtons={false}>
-              <TextField source="location_id" label="Location" />
+              <ReferenceField
+                source="location_id"
+                reference="stock_locations"
+                link="show"
+              >
+                <TextField source="name" />
+              </ReferenceField>
               <NumberField source="stocked_quantity" />
               <NumberField source="reserved_quantity" />
               <NumberField source="incoming_quantity" />
@@ -95,13 +116,22 @@ export function InventoryItemEdit() {
   return (
     <Edit>
       <SimpleForm>
+        {/* variant_id cannot be reassigned — shown read-only */}
+        <ReferenceField
+          source="variant_id"
+          reference="product_variants"
+          link={false}
+          emptyText="—"
+        >
+          <TextField source="title" label="Variant" />
+        </ReferenceField>
         <TextInput source="sku" />
         <TextInput source="description" multiline />
         <BooleanInput source="requires_shipping" />
-        <NumberInput source="weight" />
-        <NumberInput source="length" />
-        <NumberInput source="height" />
-        <NumberInput source="width" />
+        <NumberInput source="weight" helperText="grams" />
+        <NumberInput source="length" helperText="mm" />
+        <NumberInput source="height" helperText="mm" />
+        <NumberInput source="width" helperText="mm" />
       </SimpleForm>
     </Edit>
   );
@@ -116,15 +146,15 @@ export function InventoryItemCreate() {
           reference="product_variants"
           allowEmpty
         >
-          <AutocompleteInput optionText="title" />
+          <AutocompleteInput optionText="title" label="Variant (optional)" />
         </ReferenceInput>
         <TextInput source="sku" />
         <TextInput source="description" multiline />
         <BooleanInput source="requires_shipping" defaultValue={true} />
-        <NumberInput source="weight" />
-        <NumberInput source="length" />
-        <NumberInput source="height" />
-        <NumberInput source="width" />
+        <NumberInput source="weight" helperText="grams" />
+        <NumberInput source="length" helperText="mm" />
+        <NumberInput source="height" helperText="mm" />
+        <NumberInput source="width" helperText="mm" />
       </SimpleForm>
     </Create>
   );
@@ -136,8 +166,20 @@ export function InventoryLevelList() {
   return (
     <List sort={{ field: "updated_at", order: "DESC" }}>
       <Datagrid rowClick="show" bulkActionButtons={false}>
-        <TextField source="inventory_item_id" label="Item" />
-        <TextField source="location_id" label="Location" />
+        <ReferenceField
+          source="inventory_item_id"
+          reference="inventory_items"
+          link="show"
+        >
+          <TextField source="sku" label="SKU" />
+        </ReferenceField>
+        <ReferenceField
+          source="location_id"
+          reference="stock_locations"
+          link="show"
+        >
+          <TextField source="name" label="Location" />
+        </ReferenceField>
         <NumberField source="stocked_quantity" />
         <NumberField source="reserved_quantity" />
         <NumberField source="incoming_quantity" />
@@ -152,8 +194,20 @@ export function InventoryLevelShow() {
   return (
     <Show>
       <SimpleShowLayout>
-        <TextField source="inventory_item_id" />
-        <TextField source="location_id" />
+        <ReferenceField
+          source="inventory_item_id"
+          reference="inventory_items"
+          link="show"
+        >
+          <TextField source="sku" label="Item SKU" />
+        </ReferenceField>
+        <ReferenceField
+          source="location_id"
+          reference="stock_locations"
+          link="show"
+        >
+          <TextField source="name" label="Location" />
+        </ReferenceField>
         <NumberField source="stocked_quantity" />
         <NumberField source="reserved_quantity" />
         <NumberField source="incoming_quantity" />
@@ -169,6 +223,20 @@ export function InventoryLevelEdit() {
   return (
     <Edit>
       <SimpleForm>
+        <ReferenceField
+          source="inventory_item_id"
+          reference="inventory_items"
+          link={false}
+        >
+          <TextField source="sku" label="Item" />
+        </ReferenceField>
+        <ReferenceField
+          source="location_id"
+          reference="stock_locations"
+          link={false}
+        >
+          <TextField source="name" label="Location" />
+        </ReferenceField>
         <NumberInput source="stocked_quantity" />
         <NumberInput source="reserved_quantity" />
         <NumberInput source="incoming_quantity" />
@@ -255,7 +323,10 @@ export function StockLocationEdit() {
         <TextInput source="city" />
         <TextInput source="province" />
         <TextInput source="postal_code" />
-        <TextInput source="country_code" />
+        <TextInput
+          source="country_code"
+          helperText="2-letter ISO code, e.g. ZA"
+        />
         <BooleanInput source="is_active" />
       </SimpleForm>
     </Edit>
@@ -272,7 +343,10 @@ export function StockLocationCreate() {
         <TextInput source="city" />
         <TextInput source="province" />
         <TextInput source="postal_code" />
-        <TextInput source="country_code" />
+        <TextInput
+          source="country_code"
+          helperText="2-letter ISO code, e.g. ZA"
+        />
         <BooleanInput source="is_active" defaultValue={true} />
       </SimpleForm>
     </Create>

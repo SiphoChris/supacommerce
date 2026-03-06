@@ -14,6 +14,7 @@ import {
   Show,
   TabbedShowLayout,
   ReferenceManyField,
+  ReferenceField,
   Edit,
   Create,
   SimpleForm,
@@ -21,6 +22,7 @@ import {
   ReferenceInput,
   AutocompleteInput,
 } from "react-admin";
+import { CentsField } from "../shared";
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
 
@@ -51,6 +53,14 @@ export function CustomerList() {
         <TextField source="last_name" />
         <EmailField source="email" />
         <TextField source="phone" />
+        <ReferenceField
+          source="group_id"
+          reference="customer_groups"
+          link="show"
+          emptyText="—"
+        >
+          <TextField source="name" label="Group" />
+        </ReferenceField>
         <BooleanField source="is_anonymous" label="Anonymous" />
         <DateField source="created_at" showTime />
       </Datagrid>
@@ -70,7 +80,14 @@ export function CustomerShow() {
           <EmailField source="email" />
           <TextField source="phone" />
           <BooleanField source="is_anonymous" />
-          <TextField source="group_id" label="Group" />
+          <ReferenceField
+            source="group_id"
+            reference="customer_groups"
+            link="show"
+            emptyText="—"
+          >
+            <TextField source="name" label="Group" />
+          </ReferenceField>
           <DateField source="created_at" showTime />
           <DateField source="updated_at" showTime />
         </TabbedShowLayout.Tab>
@@ -102,7 +119,8 @@ export function CustomerShow() {
             <Datagrid bulkActionButtons={false} rowClick="show">
               <TextField source="display_id" label="Order #" />
               <TextField source="status" />
-              <TextField source="total" />
+              <CentsField source="total" currencySource="currency_code" />
+              <TextField source="currency_code" />
               <DateField source="created_at" showTime />
             </Datagrid>
           </ReferenceManyField>
@@ -127,7 +145,7 @@ export function CustomerEdit() {
           reference="customer_groups"
           allowEmpty
         >
-          <AutocompleteInput optionText="name" />
+          <AutocompleteInput optionText="name" label="Group (optional)" />
         </ReferenceInput>
       </SimpleForm>
     </Edit>
@@ -149,7 +167,7 @@ export function CustomerCreate() {
           reference="customer_groups"
           allowEmpty
         >
-          <AutocompleteInput optionText="name" />
+          <AutocompleteInput optionText="name" label="Group (optional)" />
         </ReferenceInput>
       </SimpleForm>
     </Create>

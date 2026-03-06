@@ -13,6 +13,7 @@ import {
   TabbedShowLayout,
   ReferenceManyField,
   SimpleShowLayout,
+  ReferenceField,
   Edit,
   Create,
   SimpleForm,
@@ -20,6 +21,7 @@ import {
   ReferenceInput,
   AutocompleteInput,
   NumberInput,
+  DateTimeInput,
 } from "react-admin";
 import {
   StatusChipField,
@@ -52,7 +54,19 @@ export function PriceList() {
       sort={{ field: "created_at", order: "DESC" }}
     >
       <Datagrid rowClick="show" bulkActionButtons={false}>
-        <TextField source="price_set_id" label="Price Set" />
+        <ReferenceField
+          source="price_set_id"
+          reference="price_sets"
+          link="show"
+        >
+          <ReferenceField
+            source="variant_id"
+            reference="product_variants"
+            link={false}
+          >
+            <TextField source="title" />
+          </ReferenceField>
+        </ReferenceField>
         <TextField source="currency_code" label="Currency" />
         <CentsField source="amount" />
         <TextField source="min_quantity" />
@@ -67,12 +81,31 @@ export function PriceShow() {
   return (
     <Show>
       <SimpleShowLayout>
-        <TextField source="price_set_id" />
+        <ReferenceField
+          source="price_set_id"
+          reference="price_sets"
+          link="show"
+        >
+          <ReferenceField
+            source="variant_id"
+            reference="product_variants"
+            link="show"
+          >
+            <TextField source="title" label="Variant" />
+          </ReferenceField>
+        </ReferenceField>
         <TextField source="currency_code" />
         <CentsField source="amount" />
         <TextField source="min_quantity" />
         <TextField source="max_quantity" />
-        <TextField source="region_id" />
+        <ReferenceField
+          source="region_id"
+          reference="regions"
+          link="show"
+          emptyText="—"
+        >
+          <TextField source="name" label="Region" />
+        </ReferenceField>
         <DateField source="created_at" showTime />
       </SimpleShowLayout>
     </Show>
@@ -84,9 +117,16 @@ export function PriceEdit() {
     <Edit>
       <SimpleForm>
         <TextInput source="currency_code" required />
-        <NumberInput source="amount" helperText="In cents" required />
+        <NumberInput
+          source="amount"
+          helperText="In cents, e.g. 1099 = R10.99"
+          required
+        />
         <NumberInput source="min_quantity" />
         <NumberInput source="max_quantity" />
+        <ReferenceInput source="region_id" reference="regions" allowEmpty>
+          <AutocompleteInput optionText="name" label="Region (optional)" />
+        </ReferenceInput>
       </SimpleForm>
     </Edit>
   );
@@ -97,12 +137,23 @@ export function PriceCreate() {
     <Create>
       <SimpleForm>
         <ReferenceInput source="price_set_id" reference="price_sets">
-          <AutocompleteInput optionText="id" required />
+          <AutocompleteInput
+            optionText={(record) => record?.variant?.title ?? record?.id ?? ""}
+            label="Price Set (Variant)"
+            required
+          />
         </ReferenceInput>
         <TextInput source="currency_code" required />
-        <NumberInput source="amount" helperText="In cents" required />
+        <NumberInput
+          source="amount"
+          helperText="In cents, e.g. 1099 = R10.99"
+          required
+        />
         <NumberInput source="min_quantity" />
         <NumberInput source="max_quantity" />
+        <ReferenceInput source="region_id" reference="regions" allowEmpty>
+          <AutocompleteInput optionText="name" label="Region (optional)" />
+        </ReferenceInput>
       </SimpleForm>
     </Create>
   );
@@ -122,7 +173,14 @@ export function PriceSetList() {
       sort={{ field: "created_at", order: "DESC" }}
     >
       <Datagrid rowClick="show" bulkActionButtons={false}>
-        <TextField source="variant_id" label="Variant" />
+        <ReferenceField
+          source="variant_id"
+          reference="product_variants"
+          link="show"
+          emptyText="—"
+        >
+          <TextField source="title" label="Variant" />
+        </ReferenceField>
         <DateField source="created_at" showTime />
       </Datagrid>
     </List>
@@ -134,7 +192,14 @@ export function PriceSetShow() {
     <Show>
       <TabbedShowLayout>
         <TabbedShowLayout.Tab label="Details">
-          <TextField source="variant_id" />
+          <ReferenceField
+            source="variant_id"
+            reference="product_variants"
+            link="show"
+            emptyText="—"
+          >
+            <TextField source="title" label="Variant" />
+          </ReferenceField>
           <DateField source="created_at" showTime />
         </TabbedShowLayout.Tab>
         <TabbedShowLayout.Tab label="Prices">
@@ -221,7 +286,13 @@ export function PriceListShow() {
             label={false}
           >
             <Datagrid bulkActionButtons={false}>
-              <TextField source="variant_id" />
+              <ReferenceField
+                source="variant_id"
+                reference="product_variants"
+                link="show"
+              >
+                <TextField source="title" />
+              </ReferenceField>
               <TextField source="currency_code" />
               <CentsField source="amount" />
               <TextField source="min_quantity" />
@@ -242,8 +313,8 @@ export function PriceListEdit() {
         <TextInput source="description" multiline />
         <SelectInput source="status" choices={PRICE_LIST_STATUS} />
         <SelectInput source="type" choices={PRICE_LIST_TYPE} />
-        <TextInput source="starts_at" type="datetime-local" />
-        <TextInput source="ends_at" type="datetime-local" />
+        <DateTimeInput source="starts_at" />
+        <DateTimeInput source="ends_at" />
       </SimpleForm>
     </Edit>
   );
@@ -265,8 +336,8 @@ export function PriceListCreate() {
           choices={PRICE_LIST_TYPE}
           defaultValue="sale"
         />
-        <TextInput source="starts_at" type="datetime-local" />
-        <TextInput source="ends_at" type="datetime-local" />
+        <DateTimeInput source="starts_at" />
+        <DateTimeInput source="ends_at" />
       </SimpleForm>
     </Create>
   );

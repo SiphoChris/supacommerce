@@ -16,13 +16,22 @@ import {
   TabbedShowLayout,
   ReferenceManyField,
   SimpleShowLayout,
+  ReferenceField,
   Edit,
   Create,
   SimpleForm,
   TextInput,
   NumberInput,
+  ReferenceInput,
+  AutocompleteInput,
+  DateTimeInput,
 } from "react-admin";
-import { StatusChipField, PROMOTION_STATUS, PROMOTION_TYPE } from "../shared";
+import {
+  StatusChipField,
+  PROMOTION_STATUS,
+  PROMOTION_TYPE,
+  PROMOTION_RULE_TYPE,
+} from "../shared";
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
 
@@ -49,7 +58,7 @@ export function PromotionList() {
       sort={{ field: "created_at", order: "DESC" }}
     >
       <Datagrid rowClick="show" bulkActionButtons={false}>
-        <TextField source="code" />
+        <TextField source="code" emptyText="(automatic)" />
         <StatusChipField source="status" />
         <StatusChipField source="type" />
         <NumberField source="value" />
@@ -71,7 +80,7 @@ export function PromotionShow() {
     <Show>
       <TabbedShowLayout>
         <TabbedShowLayout.Tab label="Details">
-          <TextField source="code" />
+          <TextField source="code" emptyText="(automatic)" />
           <TextField source="description" />
           <StatusChipField source="status" />
           <StatusChipField source="type" />
@@ -85,6 +94,7 @@ export function PromotionShow() {
           <DateField source="ends_at" showTime />
           <DateField source="created_at" showTime />
         </TabbedShowLayout.Tab>
+
         <TabbedShowLayout.Tab label="Rules">
           <ReferenceManyField
             reference="promotion_rules"
@@ -98,6 +108,7 @@ export function PromotionShow() {
             </Datagrid>
           </ReferenceManyField>
         </TabbedShowLayout.Tab>
+
         <TabbedShowLayout.Tab label="Usage">
           <ReferenceManyField
             reference="promotion_usages"
@@ -105,8 +116,22 @@ export function PromotionShow() {
             label={false}
           >
             <Datagrid bulkActionButtons={false}>
-              <TextField source="order_id" />
-              <TextField source="customer_id" />
+              <ReferenceField
+                source="order_id"
+                reference="orders"
+                link="show"
+                emptyText="—"
+              >
+                <TextField source="display_id" label="Order #" />
+              </ReferenceField>
+              <ReferenceField
+                source="customer_id"
+                reference="customers"
+                link="show"
+                emptyText="—"
+              >
+                <TextField source="email" label="Customer" />
+              </ReferenceField>
               <DateField source="created_at" showTime />
             </Datagrid>
           </ReferenceManyField>
@@ -122,17 +147,30 @@ export function PromotionEdit() {
   return (
     <Edit>
       <SimpleForm>
-        <TextInput source="code" />
+        <TextInput
+          source="code"
+          helperText="Leave blank for automatic promotions"
+        />
         <TextInput source="description" multiline />
         <SelectInput source="status" choices={PROMOTION_STATUS} />
         <SelectInput source="type" choices={PROMOTION_TYPE} />
-        <NumberInput source="value" required />
-        <NumberInput source="usage_limit" />
-        <NumberInput source="usage_limit_per_customer" />
+        <NumberInput
+          source="value"
+          required
+          helperText="Percentage (0–100) for percentage type, or cents for fixed_amount"
+        />
+        <NumberInput
+          source="usage_limit"
+          helperText="Leave blank for unlimited"
+        />
+        <NumberInput
+          source="usage_limit_per_customer"
+          helperText="Leave blank for unlimited"
+        />
         <BooleanInput source="is_automatic" />
         <BooleanInput source="is_case_insensitive" />
-        <TextInput source="starts_at" type="datetime-local" />
-        <TextInput source="ends_at" type="datetime-local" />
+        <DateTimeInput source="starts_at" />
+        <DateTimeInput source="ends_at" />
       </SimpleForm>
     </Edit>
   );
@@ -144,7 +182,10 @@ export function PromotionCreate() {
   return (
     <Create>
       <SimpleForm>
-        <TextInput source="code" />
+        <TextInput
+          source="code"
+          helperText="Leave blank for automatic promotions"
+        />
         <TextInput source="description" multiline />
         <SelectInput
           source="status"
@@ -152,13 +193,23 @@ export function PromotionCreate() {
           defaultValue="draft"
         />
         <SelectInput source="type" choices={PROMOTION_TYPE} required />
-        <NumberInput source="value" required />
-        <NumberInput source="usage_limit" />
-        <NumberInput source="usage_limit_per_customer" />
+        <NumberInput
+          source="value"
+          required
+          helperText="Percentage (0–100) for percentage type, or cents for fixed_amount"
+        />
+        <NumberInput
+          source="usage_limit"
+          helperText="Leave blank for unlimited"
+        />
+        <NumberInput
+          source="usage_limit_per_customer"
+          helperText="Leave blank for unlimited"
+        />
         <BooleanInput source="is_automatic" defaultValue={false} />
         <BooleanInput source="is_case_insensitive" defaultValue={true} />
-        <TextInput source="starts_at" type="datetime-local" />
-        <TextInput source="ends_at" type="datetime-local" />
+        <DateTimeInput source="starts_at" />
+        <DateTimeInput source="ends_at" />
       </SimpleForm>
     </Create>
   );
@@ -170,7 +221,13 @@ export function PromotionRuleList() {
   return (
     <List sort={{ field: "created_at", order: "DESC" }}>
       <Datagrid rowClick="show" bulkActionButtons={false}>
-        <TextField source="promotion_id" label="Promotion" />
+        <ReferenceField
+          source="promotion_id"
+          reference="promotions"
+          link="show"
+        >
+          <TextField source="code" emptyText="(automatic)" label="Promotion" />
+        </ReferenceField>
         <TextField source="type" />
         <TextField source="value" />
         <TextField source="description" />
@@ -184,12 +241,63 @@ export function PromotionRuleShow() {
   return (
     <Show>
       <SimpleShowLayout>
-        <TextField source="promotion_id" />
+        <ReferenceField
+          source="promotion_id"
+          reference="promotions"
+          link="show"
+        >
+          <TextField source="code" emptyText="(automatic)" label="Promotion" />
+        </ReferenceField>
         <TextField source="type" />
         <TextField source="value" />
         <TextField source="description" />
         <DateField source="created_at" showTime />
       </SimpleShowLayout>
     </Show>
+  );
+}
+
+export function PromotionRuleCreate() {
+  return (
+    <Create>
+      <SimpleForm>
+        <ReferenceInput source="promotion_id" reference="promotions">
+          <AutocompleteInput
+            optionText={(r) => r?.code ?? "(automatic)"}
+            required
+          />
+        </ReferenceInput>
+        <SelectInput source="type" choices={PROMOTION_RULE_TYPE} required />
+        <TextInput
+          source="value"
+          required
+          helperText="For cart_total: minimum in cents. For customer_group: group ID. For product/category: record ID."
+        />
+        <TextInput source="description" multiline />
+      </SimpleForm>
+    </Create>
+  );
+}
+
+export function PromotionRuleEdit() {
+  return (
+    <Edit>
+      <SimpleForm>
+        <ReferenceField
+          source="promotion_id"
+          reference="promotions"
+          link={false}
+        >
+          <TextField source="code" emptyText="(automatic)" label="Promotion" />
+        </ReferenceField>
+        <SelectInput source="type" choices={PROMOTION_RULE_TYPE} required />
+        <TextInput
+          source="value"
+          required
+          helperText="For cart_total: minimum in cents. For customer_group: group ID. For product/category: record ID."
+        />
+        <TextInput source="description" multiline />
+      </SimpleForm>
+    </Edit>
   );
 }

@@ -1,5 +1,22 @@
-import { useRecordContext } from "react-admin";
-import { Chip } from "@mui/material";
+import { useState, useCallback } from "react";
+import {
+  useRecordContext,
+  useInput,
+  DateTimeInput as RaDateTimeInput,
+} from "react-admin";
+import {
+  Chip,
+  Box,
+  Button,
+  CircularProgress,
+  Typography,
+  Stack,
+} from "@mui/material";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+
+// ─── Re-export DateTimeInput for convenience ──────────────────────────────────
+export { RaDateTimeInput as DateTimeInput };
 
 // ─── Enum choices ─────────────────────────────────────────────────────────────
 
@@ -132,7 +149,15 @@ export const ADMIN_ROLE = [
   { id: "viewer", name: "Viewer" },
 ];
 
-// ─── Reusable field components ────────────────────────────────────────────────
+export const PROMOTION_RULE_TYPE = [
+  { id: "cart_total", name: "Cart Total Minimum" },
+  { id: "product", name: "Product" },
+  { id: "product_category", name: "Product Category" },
+  { id: "customer_group", name: "Customer Group" },
+  { id: "usage_limit", name: "Usage Limit" },
+];
+
+// ─── StatusChipField ──────────────────────────────────────────────────────────
 
 type ChipColor =
   | "default"
@@ -144,35 +169,27 @@ type ChipColor =
   | "secondary";
 
 const STATUS_COLORS: Record<string, ChipColor> = {
-  // generic
   active: "success",
   draft: "default",
   archived: "default",
   cancelled: "error",
   requires_action: "error",
-  // orders
   pending: "warning",
   processing: "info",
   completed: "success",
-  // fulfillment
   fulfilled: "success",
   shipped: "success",
   returned: "default",
   not_fulfilled: "warning",
-  // payment
   captured: "success",
   refunded: "default",
   awaiting: "warning",
   authorized: "info",
-  // promotions
   expired: "error",
-  // returns
   requested: "warning",
   received: "info",
-  // reservations
   confirmed: "success",
   released: "default",
-  // price list
   sale: "info",
   override: "secondary",
 };
@@ -197,23 +214,185 @@ export function StatusChipField({
   );
 }
 
-/** Render cents as formatted currency, e.g. 1099 → $10.99 */
+// ─── CentsField ───────────────────────────────────────────────────────────────
+
+/** Renders an integer cents value as formatted currency, e.g. 1099 → R 10.99 */
 export function CentsField({
   source,
-  currency = "USD",
+  currencySource,
+  currency = "ZAR",
 }: {
   source: string;
+  currencySource?: string;
   currency?: string;
 }) {
   const record = useRecordContext();
   if (!record) return null;
   const val = record[source];
   if (val == null) return <>—</>;
+  const cur =
+    currencySource && record[currencySource]
+      ? record[currencySource]
+      : currency;
   return (
     <>
-      {new Intl.NumberFormat(undefined, { style: "currency", currency }).format(
-        val / 100,
-      )}
+      {new Intl.NumberFormat("en-ZA", {
+        style: "currency",
+        currency: cur.toUpperCase(),
+      }).format(val / 100)}
     </>
+  );
+}
+
+// ─── ImageUploadInput ─────────────────────────────────────────────────────────
+
+/**
+ * A file upload input that uploads to Supabase Storage via the storage-upload
+ * edge function and stores the resulting public URL in the form field.
+ *
+ * Usage:
+ *   <ImageUploadInput source="thumbnail" bucket="products" path="thumbnails" />
+ *   <ImageUploadInput source="avatar_url" bucket="avatars" />
+ */
+export function ImageUploadInput({
+  source,
+  bucket,
+  path,
+  label,
+}: {
+  source: string;
+  bucket: string;
+  path?: string;
+  label?: string;
+}) {
+  const { field } = useInput({ source });
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploaded, setUploaded] = useState(false);
+
+  const handleFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setUploading(true);
+      setError(null);
+      setUploaded(false);
+
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("bucket", bucket);
+        if (path) formData.append("path", path);
+
+        const res = await fetch(`${supabaseUrl}/functions/v1/storage-upload`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${supabaseKey}`,
+          },
+          body: formData,
+        });
+
+        const json = await res.json();
+
+        if (!res.ok || !json.url) {
+          throw new Error(json.error ?? "Upload failed");
+        }
+
+        field.onChange(json.url);
+        setUploaded(true);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Upload failed");
+      } finally {
+        setUploading(false);
+      }
+    },
+    [bucket, path, field],
+  );
+
+  const currentUrl = field.value as string | undefined;
+
+  return (
+    <Box sx={{ mb: 2 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ mb: 0.5, display: "block" }}
+      >
+        {label ?? source.replace(/_/g, " ")}
+      </Typography>
+
+      {/* Preview current image if URL exists */}
+      {currentUrl && (
+        <Box sx={{ mb: 1 }}>
+          <img
+            src={currentUrl}
+            alt="preview"
+            style={{
+              width: 80,
+              height: 80,
+              objectFit: "cover",
+              borderRadius: 6,
+              display: "block",
+            }}
+          />
+        </Box>
+      )}
+
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Button
+          component="label"
+          variant="outlined"
+          size="small"
+          startIcon={
+            uploading ? <CircularProgress size={14} /> : <CloudUploadIcon />
+          }
+          disabled={uploading}
+        >
+          {uploading ? "Uploading…" : currentUrl ? "Replace" : "Upload image"}
+          <input type="file" accept="image/*" hidden onChange={handleFile} />
+        </Button>
+
+        {uploaded && !uploading && (
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <CheckCircleIcon sx={{ fontSize: 16, color: "success.main" }} />
+            <Typography variant="caption" color="success.main">
+              Uploaded
+            </Typography>
+          </Stack>
+        )}
+      </Stack>
+
+      {/* URL text field — allows manual paste too */}
+      <input
+        type="text"
+        placeholder="or paste a URL"
+        value={currentUrl ?? ""}
+        onChange={(e) => field.onChange(e.target.value)}
+        style={{
+          marginTop: 6,
+          width: "100%",
+          maxWidth: 400,
+          padding: "6px 10px",
+          fontSize: 13,
+          border: "1px solid #ccc",
+          borderRadius: 4,
+          boxSizing: "border-box",
+        }}
+      />
+
+      {error && (
+        <Typography
+          variant="caption"
+          color="error"
+          sx={{ mt: 0.5, display: "block" }}
+        >
+          {error}
+        </Typography>
+      )}
+    </Box>
   );
 }

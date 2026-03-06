@@ -4,6 +4,7 @@ import {
   TextField,
   DateField,
   EmailField,
+  NumberField,
   SearchInput,
   SelectInput,
   FilterButton,
@@ -12,6 +13,7 @@ import {
   Show,
   TabbedShowLayout,
   ReferenceManyField,
+  ReferenceField,
   Edit,
   SimpleForm,
 } from "react-admin";
@@ -36,7 +38,6 @@ const filters = [
 ];
 
 // ─── List ─────────────────────────────────────────────────────────────────────
-// Orders are created by the checkout edge function — no create button.
 
 export function OrderList() {
   return (
@@ -53,10 +54,18 @@ export function OrderList() {
       <Datagrid rowClick="show" bulkActionButtons={false}>
         <TextField source="display_id" label="Order #" />
         <EmailField source="email" />
+        <ReferenceField
+          source="customer_id"
+          reference="customers"
+          link="show"
+          emptyText="—"
+        >
+          <TextField source="first_name" />
+        </ReferenceField>
         <StatusChipField source="status" />
         <StatusChipField source="payment_status" label="Payment" />
         <StatusChipField source="fulfillment_status" label="Fulfillment" />
-        <CentsField source="total" />
+        <CentsField source="total" currencySource="currency_code" />
         <TextField source="currency_code" label="Currency" />
         <DateField source="created_at" showTime />
       </Datagrid>
@@ -73,6 +82,22 @@ export function OrderShow() {
         <TabbedShowLayout.Tab label="Summary">
           <TextField source="display_id" label="Order #" />
           <EmailField source="email" />
+          <ReferenceField
+            source="customer_id"
+            reference="customers"
+            link="show"
+            emptyText="—"
+          >
+            <TextField source="email" label="Customer" />
+          </ReferenceField>
+          <ReferenceField
+            source="region_id"
+            reference="regions"
+            link="show"
+            emptyText="—"
+          >
+            <TextField source="name" label="Region" />
+          </ReferenceField>
           <StatusChipField source="status" />
           <StatusChipField source="payment_status" label="Payment Status" />
           <StatusChipField
@@ -80,11 +105,11 @@ export function OrderShow() {
             label="Fulfillment Status"
           />
           <TextField source="currency_code" />
-          <CentsField source="subtotal" />
-          <CentsField source="discount_total" />
-          <CentsField source="shipping_total" />
-          <CentsField source="tax_total" />
-          <CentsField source="total" />
+          <CentsField source="subtotal" currencySource="currency_code" />
+          <CentsField source="discount_total" currencySource="currency_code" />
+          <CentsField source="shipping_total" currencySource="currency_code" />
+          <CentsField source="tax_total" currencySource="currency_code" />
+          <CentsField source="total" currencySource="currency_code" />
           <DateField source="created_at" showTime />
           <DateField source="updated_at" showTime />
           <DateField source="cancelled_at" showTime />
@@ -116,6 +141,7 @@ export function OrderShow() {
             <Datagrid bulkActionButtons={false} rowClick="show">
               <TextField source="provider_id" label="Provider" />
               <TextField source="tracking_number" />
+              <TextField source="tracking_url" />
               <DateField source="shipped_at" showTime />
               <DateField source="cancelled_at" showTime />
             </Datagrid>
@@ -158,7 +184,6 @@ export function OrderShow() {
 }
 
 // ─── Edit ─────────────────────────────────────────────────────────────────────
-// Admins can manually update order status (e.g. cancel, mark completed).
 
 export function OrderEdit() {
   return (

@@ -12,6 +12,7 @@ import {
   ExportButton,
   Show,
   SimpleShowLayout,
+  ReferenceField,
   Edit,
   Create,
   SimpleForm,
@@ -20,6 +21,7 @@ import {
   AutocompleteInput,
   NumberInput,
 } from "react-admin";
+import { ImageUploadInput } from "../shared";
 
 // ─── Product Variants ─────────────────────────────────────────────────────────
 
@@ -44,6 +46,9 @@ export function ProductVariantList() {
       sort={{ field: "created_at", order: "DESC" }}
     >
       <Datagrid rowClick="show" bulkActionButtons={false}>
+        <ReferenceField source="product_id" reference="products" link="show">
+          <TextField source="title" />
+        </ReferenceField>
         <TextField source="title" />
         <TextField source="sku" />
         <TextField source="barcode" />
@@ -60,6 +65,9 @@ export function ProductVariantShow() {
   return (
     <Show>
       <SimpleShowLayout>
+        <ReferenceField source="product_id" reference="products" link="show">
+          <TextField source="title" />
+        </ReferenceField>
         <TextField source="title" />
         <TextField source="sku" />
         <TextField source="barcode" />
@@ -82,15 +90,19 @@ export function ProductVariantEdit() {
   return (
     <Edit>
       <SimpleForm>
+        {/* product_id cannot be reassigned after creation — shown read-only */}
+        <ReferenceField source="product_id" reference="products" link={false}>
+          <TextField source="title" label="Product" />
+        </ReferenceField>
         <TextInput source="title" required />
         <TextInput source="sku" />
         <TextInput source="barcode" />
-        <TextInput source="ean" />
-        <TextInput source="upc" />
-        <NumberInput source="weight" />
-        <NumberInput source="length" />
-        <NumberInput source="height" />
-        <NumberInput source="width" />
+        <TextInput source="ean" label="EAN" />
+        <TextInput source="upc" label="UPC" />
+        <NumberInput source="weight" helperText="grams" />
+        <NumberInput source="length" helperText="mm" />
+        <NumberInput source="height" helperText="mm" />
+        <NumberInput source="width" helperText="mm" />
         <BooleanInput source="manage_inventory" />
         <BooleanInput source="allow_backorder" />
         <NumberInput source="rank" />
@@ -109,11 +121,60 @@ export function ProductVariantCreate() {
         <TextInput source="title" required />
         <TextInput source="sku" />
         <TextInput source="barcode" />
-        <NumberInput source="weight" />
+        <TextInput source="ean" label="EAN" />
+        <TextInput source="upc" label="UPC" />
+        <NumberInput source="weight" helperText="grams" />
+        <NumberInput source="length" helperText="mm" />
+        <NumberInput source="height" helperText="mm" />
+        <NumberInput source="width" helperText="mm" />
         <BooleanInput source="manage_inventory" defaultValue={true} />
         <BooleanInput source="allow_backorder" defaultValue={false} />
+        <NumberInput source="rank" defaultValue={0} />
       </SimpleForm>
     </Create>
+  );
+}
+
+// ─── Product Images ───────────────────────────────────────────────────────────
+
+export function ProductImageCreate() {
+  return (
+    <Create>
+      <SimpleForm>
+        <ReferenceInput source="product_id" reference="products">
+          <AutocompleteInput optionText="title" required />
+        </ReferenceInput>
+        <ImageUploadInput
+          source="url"
+          bucket="products"
+          path="images"
+          label="Image"
+        />
+        <TextInput source="alt" label="Alt text" />
+        <NumberInput
+          source="rank"
+          defaultValue={0}
+          helperText="Display order (lower = first)"
+        />
+      </SimpleForm>
+    </Create>
+  );
+}
+
+export function ProductImageEdit() {
+  return (
+    <Edit>
+      <SimpleForm>
+        <ImageUploadInput
+          source="url"
+          bucket="products"
+          path="images"
+          label="Image"
+        />
+        <TextInput source="alt" label="Alt text" />
+        <NumberInput source="rank" helperText="Display order (lower = first)" />
+      </SimpleForm>
+    </Edit>
   );
 }
 
@@ -142,7 +203,14 @@ export function ProductCategoryList() {
       <Datagrid rowClick="show" bulkActionButtons={false}>
         <TextField source="name" />
         <TextField source="handle" />
-        <TextField source="description" />
+        <ReferenceField
+          source="parent_id"
+          reference="product_categories"
+          link="show"
+          emptyText="—"
+        >
+          <TextField source="name" />
+        </ReferenceField>
         <BooleanField source="is_active" label="Active" />
         <BooleanField source="is_internal" label="Internal" />
         <TextField source="rank" />
@@ -159,7 +227,14 @@ export function ProductCategoryShow() {
         <TextField source="name" />
         <TextField source="handle" />
         <TextField source="description" />
-        <TextField source="parent_id" label="Parent Category" />
+        <ReferenceField
+          source="parent_id"
+          reference="product_categories"
+          link="show"
+          emptyText="—"
+        >
+          <TextField source="name" label="Parent Category" />
+        </ReferenceField>
         <BooleanField source="is_active" />
         <BooleanField source="is_internal" />
         <TextField source="rank" />

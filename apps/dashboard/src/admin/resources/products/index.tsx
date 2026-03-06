@@ -14,13 +14,16 @@ import {
   Show,
   TabbedShowLayout,
   ReferenceManyField,
+  ReferenceField,
+  ReferenceArrayInput,
+  AutocompleteArrayInput,
   Edit,
   Create,
   SimpleForm,
   TextInput,
   ImageField,
 } from "react-admin";
-import { StatusChipField, PRODUCT_STATUS } from "../shared";
+import { StatusChipField, PRODUCT_STATUS, ImageUploadInput } from "../shared";
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
 
@@ -143,8 +146,131 @@ export function ProductShow() {
             </Datagrid>
           </ReferenceManyField>
         </TabbedShowLayout.Tab>
+
+        <TabbedShowLayout.Tab label="Categories">
+          <ReferenceManyField
+            reference="product_category_products"
+            target="product_id"
+            label={false}
+          >
+            <Datagrid bulkActionButtons={false}>
+              <ReferenceField
+                source="category_id"
+                reference="product_categories"
+                link="show"
+              >
+                <TextField source="name" />
+              </ReferenceField>
+            </Datagrid>
+          </ReferenceManyField>
+        </TabbedShowLayout.Tab>
+
+        <TabbedShowLayout.Tab label="Collections">
+          <ReferenceManyField
+            reference="product_collection_products"
+            target="product_id"
+            label={false}
+          >
+            <Datagrid bulkActionButtons={false}>
+              <ReferenceField
+                source="collection_id"
+                reference="product_collections"
+                link="show"
+              >
+                <TextField source="title" />
+              </ReferenceField>
+            </Datagrid>
+          </ReferenceManyField>
+        </TabbedShowLayout.Tab>
+
+        <TabbedShowLayout.Tab label="Tags">
+          <ReferenceManyField
+            reference="product_tag_products"
+            target="product_id"
+            label={false}
+          >
+            <Datagrid bulkActionButtons={false}>
+              <ReferenceField
+                source="tag_id"
+                reference="product_tags"
+                link={false}
+              >
+                <TextField source="value" />
+              </ReferenceField>
+            </Datagrid>
+          </ReferenceManyField>
+        </TabbedShowLayout.Tab>
       </TabbedShowLayout>
     </Show>
+  );
+}
+
+// ─── Shared form fields ───────────────────────────────────────────────────────
+// Categories, collections, and tags are junction tables — react-admin handles
+// them via ReferenceArrayInput + AutocompleteArrayInput which reads/writes the
+// junction table automatically when the dataProvider supports many-to-many.
+// The source uses the junction table resource name and the foreign key array.
+
+function ProductFormFields({ isCreate = false }: { isCreate?: boolean }) {
+  return (
+    <>
+      <TextInput source="title" required fullWidth />
+      <TextInput source="subtitle" fullWidth />
+      <TextInput
+        source="handle"
+        required
+        fullWidth
+        helperText="URL-safe identifier, e.g. my-product"
+      />
+      <TextInput source="description" multiline rows={4} fullWidth />
+      <SelectInput
+        source="status"
+        choices={PRODUCT_STATUS}
+        defaultValue={isCreate ? "draft" : undefined}
+      />
+
+      <ImageUploadInput
+        source="thumbnail"
+        bucket="products"
+        path="thumbnails"
+        label="Thumbnail"
+      />
+
+      <BooleanInput
+        source="is_giftcard"
+        label="Gift Card"
+        defaultValue={false}
+      />
+      <BooleanInput source="discountable" defaultValue={true} />
+      <TextInput source="external_id" />
+
+      {/* Categories — many-to-many via product_category_products */}
+      <ReferenceArrayInput
+        source="category_ids"
+        reference="product_categories"
+        label="Categories"
+      >
+        <AutocompleteArrayInput optionText="name" />
+      </ReferenceArrayInput>
+
+      {/* Collections — many-to-many via product_collection_products */}
+      <ReferenceArrayInput
+        source="collection_ids"
+        reference="product_collections"
+        label="Collections"
+      >
+        <AutocompleteArrayInput optionText="title" />
+      </ReferenceArrayInput>
+
+      {/* Tags — many-to-many via product_tag_products */}
+      <ReferenceArrayInput
+        source="tag_ids"
+        reference="product_tags"
+        label="Tags"
+      >
+        <AutocompleteArrayInput optionText="value" />
+      </ReferenceArrayInput>
+    </>
   );
 }
 
@@ -154,15 +280,7 @@ export function ProductEdit() {
   return (
     <Edit>
       <SimpleForm>
-        <TextInput source="title" required />
-        <TextInput source="subtitle" />
-        <TextInput source="handle" required />
-        <TextInput source="description" multiline rows={4} />
-        <SelectInput source="status" choices={PRODUCT_STATUS} />
-        <TextInput source="thumbnail" label="Thumbnail URL" />
-        <BooleanInput source="is_giftcard" label="Gift Card" />
-        <BooleanInput source="discountable" />
-        <TextInput source="external_id" />
+        <ProductFormFields />
       </SimpleForm>
     </Edit>
   );
@@ -174,22 +292,7 @@ export function ProductCreate() {
   return (
     <Create>
       <SimpleForm>
-        <TextInput source="title" required />
-        <TextInput source="subtitle" />
-        <TextInput source="handle" required />
-        <TextInput source="description" multiline rows={4} />
-        <SelectInput
-          source="status"
-          choices={PRODUCT_STATUS}
-          defaultValue="draft"
-        />
-        <TextInput source="thumbnail" label="Thumbnail URL" />
-        <BooleanInput
-          source="is_giftcard"
-          label="Gift Card"
-          defaultValue={false}
-        />
-        <BooleanInput source="discountable" defaultValue={true} />
+        <ProductFormFields isCreate />
       </SimpleForm>
     </Create>
   );
