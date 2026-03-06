@@ -12,8 +12,6 @@ import {
   ReferenceManyField,
   Edit,
   SimpleForm,
-  ReferenceInput,
-  AutocompleteInput,
 } from "react-admin";
 import {
   StatusChipField,

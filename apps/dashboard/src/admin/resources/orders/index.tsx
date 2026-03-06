@@ -4,22 +4,16 @@ import {
   TextField,
   DateField,
   EmailField,
-  NumberField,
   SearchInput,
   SelectInput,
   FilterButton,
   TopToolbar,
-  CreateButton,
   ExportButton,
   Show,
   TabbedShowLayout,
   ReferenceManyField,
   Edit,
-  Create,
   SimpleForm,
-  TextInput,
-  ReferenceInput,
-  AutocompleteInput,
 } from "react-admin";
 import {
   StatusChipField,
@@ -42,6 +36,7 @@ const filters = [
 ];
 
 // ─── List ─────────────────────────────────────────────────────────────────────
+// Orders are created by the checkout edge function — no create button.
 
 export function OrderList() {
   return (
@@ -50,7 +45,6 @@ export function OrderList() {
       actions={
         <TopToolbar>
           <FilterButton />
-          <CreateButton />
           <ExportButton />
         </TopToolbar>
       }
@@ -164,44 +158,19 @@ export function OrderShow() {
 }
 
 // ─── Edit ─────────────────────────────────────────────────────────────────────
+// Admins can manually update order status (e.g. cancel, mark completed).
 
 export function OrderEdit() {
   return (
     <Edit>
       <SimpleForm>
-        <TextInput source="email" />
         <SelectInput source="status" choices={ORDER_STATUS} />
         <SelectInput source="payment_status" choices={ORDER_PAYMENT_STATUS} />
         <SelectInput
           source="fulfillment_status"
           choices={ORDER_FULFILLMENT_STATUS}
         />
-        <TextInput source="currency_code" label="Currency Code" />
       </SimpleForm>
     </Edit>
-  );
-}
-
-// ─── Create ───────────────────────────────────────────────────────────────────
-
-export function OrderCreate() {
-  return (
-    <Create>
-      <SimpleForm>
-        <TextInput source="email" required />
-        <ReferenceInput source="customer_id" reference="customers">
-          <AutocompleteInput optionText="email" />
-        </ReferenceInput>
-        <ReferenceInput source="region_id" reference="regions">
-          <AutocompleteInput optionText="name" />
-        </ReferenceInput>
-        <TextInput source="currency_code" label="Currency Code" />
-        <SelectInput
-          source="status"
-          choices={ORDER_STATUS}
-          defaultValue="pending"
-        />
-      </SimpleForm>
-    </Create>
   );
 }

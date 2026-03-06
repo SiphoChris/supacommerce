@@ -7,7 +7,6 @@ import {
   BooleanField,
   BooleanInput,
   SearchInput,
-  SelectInput,
   FilterButton,
   TopToolbar,
   CreateButton,
@@ -24,7 +23,6 @@ import {
   ReferenceInput,
   AutocompleteInput,
 } from "react-admin";
-import { StatusChipField, RESERVATION_STATUS } from "../shared";
 
 // ─── Inventory Items ──────────────────────────────────────────────────────────
 

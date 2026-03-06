@@ -35,7 +35,6 @@ import {
   OrderList,
   OrderShow,
   OrderEdit,
-  OrderCreate,
 } from "../admin/resources/orders/index";
 import {
   OrderFulfillmentList,
@@ -89,7 +88,7 @@ import {
   CustomerGroupCreate,
 } from "../admin/resources/customers/index";
 
-// Payments
+// Payments — read-only + status edit only, no create
 import {
   PaymentCollectionList,
   PaymentCollectionShow,
@@ -195,6 +194,7 @@ import {
 
 export const resources: ResourceProps[] = [
   // ── Admin ─────────────────────────────────────────────────────────────────
+  // admin_users: no create — users are onboarded via invitation only
   {
     name: "admin_users",
     icon: Shield,
@@ -211,18 +211,18 @@ export const resources: ResourceProps[] = [
   },
 
   // ── Orders ────────────────────────────────────────────────────────────────
+  // orders: no create — created by checkout edge function only
   {
     name: "orders",
     icon: ShoppingCart,
     list: OrderList,
     show: OrderShow,
     edit: OrderEdit,
-    create: OrderCreate,
   },
+  // order_line_items: read-only, shown inside order show page
   {
     name: "order_line_items",
     icon: List,
-    // read-only — managed via order show page
   },
   {
     name: "order_fulfillments",
@@ -232,10 +232,10 @@ export const resources: ResourceProps[] = [
     edit: OrderFulfillmentEdit,
     create: OrderFulfillmentCreate,
   },
+  // order_fulfillment_items: read-only junction table, shown inside fulfillment show
   {
     name: "order_fulfillment_items",
     icon: Box,
-    // read-only — managed via fulfillment show page
   },
   {
     name: "order_returns",
@@ -245,10 +245,10 @@ export const resources: ResourceProps[] = [
     edit: OrderReturnEdit,
     create: OrderReturnCreate,
   },
+  // order_return_items: read-only junction table, shown inside return show
   {
     name: "order_return_items",
     icon: RefreshCw,
-    // read-only — managed via return show page
   },
   {
     name: "order_refunds",
@@ -299,6 +299,7 @@ export const resources: ResourceProps[] = [
     edit: ProductTagEdit,
     create: ProductTagCreate,
   },
+  // Junction/child tables — registered for reference fields, no UI
   { name: "product_options", icon: Settings },
   { name: "product_option_values", icon: Grid },
   { name: "product_images", icon: Image },
@@ -316,10 +317,10 @@ export const resources: ResourceProps[] = [
     edit: CustomerEdit,
     create: CustomerCreate,
   },
+  // customer_addresses: managed via customer show page
   {
     name: "customer_addresses",
     icon: MapPin,
-    // managed via customer show page
   },
   {
     name: "customer_groups",
@@ -331,11 +332,14 @@ export const resources: ResourceProps[] = [
   },
 
   // ── Carts ─────────────────────────────────────────────────────────────────
+  // Carts are managed by the SDK — admin can read only
   { name: "carts", icon: ShoppingCart },
   { name: "cart_line_items", icon: List },
   { name: "cart_shipping_methods", icon: Truck },
 
   // ── Payments ──────────────────────────────────────────────────────────────
+  // payment_collections: created by checkout RPC, status edit only
+  // payment_sessions: managed by payment webhook, read-only
   {
     name: "payment_collections",
     icon: CreditCard,
@@ -392,6 +396,7 @@ export const resources: ResourceProps[] = [
     list: PromotionRuleList,
     show: PromotionRuleShow,
   },
+  // promotion_usages: read-only audit log
   { name: "promotion_usages", icon: BarChart2 },
 
   // ── Inventory ─────────────────────────────────────────────────────────────
@@ -411,6 +416,7 @@ export const resources: ResourceProps[] = [
     edit: InventoryLevelEdit,
     create: InventoryLevelCreate,
   },
+  // inventory_reservations: managed by RPCs — read-only
   { name: "inventory_reservations", icon: Warehouse },
   {
     name: "stock_locations",

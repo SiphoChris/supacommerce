@@ -10,7 +10,6 @@ import {
   SearchInput,
   FilterButton,
   TopToolbar,
-  CreateButton,
   ExportButton,
   Show,
   SimpleShowLayout,
@@ -24,6 +23,7 @@ import {
   NumberInput,
   ReferenceInput,
   AutocompleteInput,
+  CreateButton,
 } from "react-admin";
 import { StatusChipField, ADMIN_ROLE } from "./shared";
 
@@ -303,7 +303,6 @@ export function AdminUserList() {
       actions={
         <TopToolbar>
           <FilterButton />
-          <CreateButton />
           <ExportButton />
         </TopToolbar>
       }

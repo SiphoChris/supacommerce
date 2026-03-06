@@ -17,6 +17,7 @@ import {
   TopToolbar,
   FilterButton,
   ExportButton,
+  CreateButton,
 } from "react-admin";
 import {
   StatusChipField,
@@ -26,6 +27,7 @@ import {
 } from "../shared";
 
 // ─── Order Fulfillments ───────────────────────────────────────────────────────
+// Fulfillments are created by admins to record dispatched shipments.
 
 export function OrderFulfillmentList() {
   return (
@@ -33,6 +35,7 @@ export function OrderFulfillmentList() {
       sort={{ field: "created_at", order: "DESC" }}
       actions={
         <TopToolbar>
+          <CreateButton />
           <ExportButton />
         </TopToolbar>
       }
@@ -107,6 +110,7 @@ export function OrderFulfillmentCreate() {
 }
 
 // ─── Order Returns ────────────────────────────────────────────────────────────
+// Returns are created by admins to record customer return requests.
 
 const returnFilters = [<SelectInput source="status" choices={RETURN_STATUS} />];
 
@@ -118,6 +122,7 @@ export function OrderReturnList() {
       actions={
         <TopToolbar>
           <FilterButton />
+          <CreateButton />
           <ExportButton />
         </TopToolbar>
       }
@@ -169,6 +174,11 @@ export function OrderReturnEdit() {
     <Edit>
       <SimpleForm>
         <SelectInput source="status" choices={RETURN_STATUS} />
+        <TextInput
+          source="received_at"
+          type="datetime-local"
+          label="Received At"
+        />
       </SimpleForm>
     </Edit>
   );
@@ -192,6 +202,7 @@ export function OrderReturnCreate() {
 }
 
 // ─── Order Refunds ────────────────────────────────────────────────────────────
+// Refunds are created manually by admins.
 
 const refundFilters = [<SelectInput source="reason" choices={REFUND_REASON} />];
 
@@ -203,6 +214,7 @@ export function OrderRefundList() {
       actions={
         <TopToolbar>
           <FilterButton />
+          <CreateButton />
           <ExportButton />
         </TopToolbar>
       }
