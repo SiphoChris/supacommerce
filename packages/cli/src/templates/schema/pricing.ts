@@ -8,14 +8,20 @@ import {
   text,
   pgEnum,
   index,
-} from "drizzle-orm/pg-core"
-import { productVariants } from "./catalog.ts"
-import { currencies } from "./currencies.ts"
-import { regions } from "./regions.ts"
-import { customerGroups } from "./customers.ts"
+} from "drizzle-orm/pg-core";
+import { productVariants } from "./catalog.ts";
+import { currencies } from "./currencies.ts";
+import { regions } from "./regions.ts";
+import { customerGroups } from "./customers.ts";
 
-export const priceListTypeEnum = pgEnum("price_list_type", ["sale", "override"])
-export const priceListStatusEnum = pgEnum("price_list_status", ["active", "draft"])
+export const priceListTypeEnum = pgEnum("price_list_type", [
+  "sale",
+  "override",
+]);
+export const priceListStatusEnum = pgEnum("price_list_status", [
+  "active",
+  "draft",
+]);
 
 /**
  * price_sets
@@ -32,9 +38,13 @@ export const priceSets = pgTable("price_sets", {
     .notNull()
     .unique()
     .references(() => productVariants.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-})
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
 /**
  * prices
@@ -61,7 +71,9 @@ export const prices = pgTable(
       .notNull()
       .references(() => currencies.code),
 
-    regionId: uuid("region_id").references(() => regions.id, { onDelete: "cascade" }),
+    regionId: uuid("region_id").references(() => regions.id, {
+      onDelete: "cascade",
+    }),
 
     /** Integer in smallest currency unit */
     amount: integer("amount").notNull(),
@@ -72,15 +84,19 @@ export const prices = pgTable(
     /** For volume/tiered pricing. null = no maximum */
     maxQuantity: integer("max_quantity"),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     index("prices_price_set_id_idx").on(t.priceSetId),
     index("prices_currency_code_idx").on(t.currencyCode),
     index("prices_region_id_idx").on(t.regionId),
-  ]
-)
+  ],
+);
 
 /**
  * price_lists
@@ -104,10 +120,14 @@ export const priceLists = pgTable("price_lists", {
   /** When the price list expires */
   endsAt: timestamp("ends_at", { withTimezone: true }),
 
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-})
+});
 
 /**
  * price_list_customer_groups
@@ -116,13 +136,14 @@ export const priceLists = pgTable("price_lists", {
  * If no groups are linked, the price list applies to all customers.
  */
 export const priceListCustomerGroups = pgTable("price_list_customer_groups", {
+  id: uuid("id").primaryKey().defaultRandom(),
   priceListId: uuid("price_list_id")
     .notNull()
     .references(() => priceLists.id, { onDelete: "cascade" }),
   groupId: uuid("group_id")
     .notNull()
     .references(() => customerGroups.id, { onDelete: "cascade" }),
-})
+});
 
 /**
  * price_list_prices
@@ -143,18 +164,24 @@ export const priceListPrices = pgTable(
     currencyCode: varchar("currency_code", { length: 3 })
       .notNull()
       .references(() => currencies.code),
-    regionId: uuid("region_id").references(() => regions.id, { onDelete: "cascade" }),
+    regionId: uuid("region_id").references(() => regions.id, {
+      onDelete: "cascade",
+    }),
     amount: integer("amount").notNull(),
     minQuantity: integer("min_quantity"),
     maxQuantity: integer("max_quantity"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (t) => [index("price_list_prices_price_list_id_idx").on(t.priceListId)]
-)
+  (t) => [index("price_list_prices_price_list_id_idx").on(t.priceListId)],
+);
 
-export type PriceSet = typeof priceSets.$inferSelect
-export type Price = typeof prices.$inferSelect
-export type NewPrice = typeof prices.$inferInsert
-export type PriceList = typeof priceLists.$inferSelect
-export type NewPriceList = typeof priceLists.$inferInsert
+export type PriceSet = typeof priceSets.$inferSelect;
+export type Price = typeof prices.$inferSelect;
+export type NewPrice = typeof prices.$inferInsert;
+export type PriceList = typeof priceLists.$inferSelect;
+export type NewPriceList = typeof priceLists.$inferInsert;

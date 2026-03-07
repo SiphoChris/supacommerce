@@ -9,13 +9,13 @@ import {
   jsonb,
   index,
   pgEnum,
-} from "drizzle-orm/pg-core"
+} from "drizzle-orm/pg-core";
 
 export const productStatusEnum = pgEnum("product_status", [
   "draft",
   "published",
   "archived",
-])
+]);
 
 /**
  * products
@@ -44,15 +44,19 @@ export const products = pgTable(
 
     metadata: jsonb("metadata"),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
     index("products_handle_idx").on(t.handle),
     index("products_status_idx").on(t.status),
-  ]
-)
+  ],
+);
 
 /**
  * product_categories
@@ -69,9 +73,13 @@ export const productCategories = pgTable("product_categories", {
   rank: integer("rank").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
   isInternal: boolean("is_internal").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-})
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
 /**
  * product_category_products
@@ -79,13 +87,14 @@ export const productCategories = pgTable("product_categories", {
  * Many-to-many join between products and categories.
  */
 export const productCategoryProducts = pgTable("product_category_products", {
+  id: uuid("id").primaryKey().defaultRandom(),
   productId: uuid("product_id")
     .notNull()
     .references(() => products.id, { onDelete: "cascade" }),
   categoryId: uuid("category_id")
     .notNull()
     .references(() => productCategories.id, { onDelete: "cascade" }),
-})
+});
 
 /**
  * product_collections
@@ -98,22 +107,30 @@ export const productCollections = pgTable("product_collections", {
   title: varchar("title", { length: 255 }).notNull(),
   handle: varchar("handle", { length: 255 }).notNull().unique(),
   metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-})
+});
 
 /**
  * product_collection_products
  */
-export const productCollectionProducts = pgTable("product_collection_products", {
-  productId: uuid("product_id")
-    .notNull()
-    .references(() => products.id, { onDelete: "cascade" }),
-  collectionId: uuid("collection_id")
-    .notNull()
-    .references(() => productCollections.id, { onDelete: "cascade" }),
-})
+export const productCollectionProducts = pgTable(
+  "product_collection_products",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    collectionId: uuid("collection_id")
+      .notNull()
+      .references(() => productCollections.id, { onDelete: "cascade" }),
+  },
+);
 
 /**
  * product_tags
@@ -121,18 +138,23 @@ export const productCollectionProducts = pgTable("product_collection_products", 
 export const productTags = pgTable("product_tags", {
   id: uuid("id").primaryKey().defaultRandom(),
   value: varchar("value", { length: 100 }).notNull().unique(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-})
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
 export const productTagProducts = pgTable("product_tag_products", {
+  id: uuid("id").primaryKey().defaultRandom(),
   productId: uuid("product_id")
     .notNull()
     .references(() => products.id, { onDelete: "cascade" }),
   tagId: uuid("tag_id")
     .notNull()
     .references(() => productTags.id, { onDelete: "cascade" }),
-})
+});
 
 /**
  * product_options
@@ -146,9 +168,13 @@ export const productOptions = pgTable("product_options", {
     .references(() => products.id, { onDelete: "cascade" }),
   title: varchar("title", { length: 100 }).notNull(),
   rank: integer("rank").notNull().default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-})
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
 /**
  * product_option_values
@@ -162,9 +188,13 @@ export const productOptionValues = pgTable("product_option_values", {
     .references(() => productOptions.id, { onDelete: "cascade" }),
   value: varchar("value", { length: 100 }).notNull(),
   rank: integer("rank").notNull().default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-})
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
 /**
  * product_variants
@@ -204,15 +234,19 @@ export const productVariants = pgTable(
 
     metadata: jsonb("metadata"),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
     index("product_variants_product_id_idx").on(t.productId),
     index("product_variants_sku_idx").on(t.sku),
-  ]
-)
+  ],
+);
 
 /**
  * product_variant_option_values
@@ -220,14 +254,18 @@ export const productVariants = pgTable(
  * Which option values a variant has.
  * e.g. variant "Blue/Large" → [option_value: "Blue", option_value: "Large"]
  */
-export const productVariantOptionValues = pgTable("product_variant_option_values", {
-  variantId: uuid("variant_id")
-    .notNull()
-    .references(() => productVariants.id, { onDelete: "cascade" }),
-  optionValueId: uuid("option_value_id")
-    .notNull()
-    .references(() => productOptionValues.id, { onDelete: "cascade" }),
-})
+export const productVariantOptionValues = pgTable(
+  "product_variant_option_values",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    variantId: uuid("variant_id")
+      .notNull()
+      .references(() => productVariants.id, { onDelete: "cascade" }),
+    optionValueId: uuid("option_value_id")
+      .notNull()
+      .references(() => productOptionValues.id, { onDelete: "cascade" }),
+  },
+);
 
 /**
  * product_images
@@ -240,17 +278,21 @@ export const productImages = pgTable("product_images", {
   url: text("url").notNull(),
   alt: varchar("alt", { length: 255 }),
   rank: integer("rank").notNull().default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-})
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
-export type Product = typeof products.$inferSelect
-export type NewProduct = typeof products.$inferInsert
-export type ProductVariant = typeof productVariants.$inferSelect
-export type NewProductVariant = typeof productVariants.$inferInsert
-export type ProductOption = typeof productOptions.$inferSelect
-export type ProductOptionValue = typeof productOptionValues.$inferSelect
-export type ProductCategory = typeof productCategories.$inferSelect
-export type ProductCollection = typeof productCollections.$inferSelect
-export type ProductImage = typeof productImages.$inferSelect
-export type ProductTag = typeof productTags.$inferSelect
+export type Product = typeof products.$inferSelect;
+export type NewProduct = typeof products.$inferInsert;
+export type ProductVariant = typeof productVariants.$inferSelect;
+export type NewProductVariant = typeof productVariants.$inferInsert;
+export type ProductOption = typeof productOptions.$inferSelect;
+export type ProductOptionValue = typeof productOptionValues.$inferSelect;
+export type ProductCategory = typeof productCategories.$inferSelect;
+export type ProductCollection = typeof productCollections.$inferSelect;
+export type ProductImage = typeof productImages.$inferSelect;
+export type ProductTag = typeof productTags.$inferSelect;

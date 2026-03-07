@@ -218,6 +218,7 @@ export const orderFulfillments = pgTable(
  * Which line items (and quantities) are included in each fulfillment.
  */
 export const orderFulfillmentItems = pgTable("order_fulfillment_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
   fulfillmentId: uuid("fulfillment_id")
     .notNull()
     .references(() => orderFulfillments.id, { onDelete: "cascade" }),
@@ -262,6 +263,7 @@ export const orderReturns = pgTable(
  * order_return_items
  */
 export const orderReturnItems = pgTable("order_return_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
   returnId: uuid("return_id")
     .notNull()
     .references(() => orderReturns.id, { onDelete: "cascade" }),
