@@ -26,6 +26,7 @@ import {
   AutocompleteInput,
   DateTimeInput,
 } from "react-admin";
+import { useFormContext } from "react-hook-form";
 import {
   StatusChipField,
   PROMOTION_STATUS,
@@ -257,6 +258,92 @@ export function PromotionRuleShow() {
   );
 }
 
+/**
+ * PromotionRuleValueInput
+ *
+ * Renders a different input for `value` depending on the selected rule type:
+ *   - product          → ReferenceInput → products (search by title)
+ *   - product_category → ReferenceInput → product_categories (search by name)
+ *   - customer_group   → ReferenceInput → customer_groups (search by name)
+ *   - cart_total       → NumberInput (amount in cents)
+ *   - usage_limit      → NumberInput (integer count)
+ */
+function PromotionRuleValueInput() {
+  const { watch } = useFormContext();
+  const type = watch("type");
+
+  if (type === "product") {
+    return (
+      <ReferenceInput source="value" reference="products">
+        <AutocompleteInput
+          optionText="title"
+          label="Product"
+          helperText="Select the product this rule applies to"
+          required
+        />
+      </ReferenceInput>
+    );
+  }
+
+  if (type === "product_category") {
+    return (
+      <ReferenceInput source="value" reference="product_categories">
+        <AutocompleteInput
+          optionText="name"
+          label="Product Category"
+          helperText="Select the category this rule applies to"
+          required
+        />
+      </ReferenceInput>
+    );
+  }
+
+  if (type === "customer_group") {
+    return (
+      <ReferenceInput source="value" reference="customer_groups">
+        <AutocompleteInput
+          optionText="name"
+          label="Customer Group"
+          helperText="Select the customer group this rule applies to"
+          required
+        />
+      </ReferenceInput>
+    );
+  }
+
+  if (type === "cart_total") {
+    return (
+      <NumberInput
+        source="value"
+        label="Minimum Cart Total (cents)"
+        helperText="e.g. 50000 = R500.00 minimum"
+        required
+      />
+    );
+  }
+
+  if (type === "usage_limit") {
+    return (
+      <NumberInput
+        source="value"
+        label="Usage Limit"
+        helperText="Maximum number of times this promotion can be used"
+        required
+      />
+    );
+  }
+
+  // No type selected yet
+  return (
+    <TextInput
+      source="value"
+      label="Value"
+      helperText="Select a rule type above first"
+      disabled
+    />
+  );
+}
+
 export function PromotionRuleCreate() {
   return (
     <Create>
@@ -268,11 +355,7 @@ export function PromotionRuleCreate() {
           />
         </ReferenceInput>
         <SelectInput source="type" choices={PROMOTION_RULE_TYPE} required />
-        <TextInput
-          source="value"
-          required
-          helperText="For cart_total: minimum in cents. For customer_group: group ID. For product/category: record ID."
-        />
+        <PromotionRuleValueInput />
         <TextInput source="description" multiline />
       </SimpleForm>
     </Create>
@@ -291,11 +374,7 @@ export function PromotionRuleEdit() {
           <TextField source="code" emptyText="(automatic)" label="Promotion" />
         </ReferenceField>
         <SelectInput source="type" choices={PROMOTION_RULE_TYPE} required />
-        <TextInput
-          source="value"
-          required
-          helperText="For cart_total: minimum in cents. For customer_group: group ID. For product/category: record ID."
-        />
+        <PromotionRuleValueInput />
         <TextInput source="description" multiline />
       </SimpleForm>
     </Edit>

@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from "react";
 import {
   List,
   Datagrid,
@@ -15,15 +16,25 @@ import {
   TabbedShowLayout,
   ReferenceManyField,
   ReferenceField,
-  ReferenceArrayInput,
-  AutocompleteArrayInput,
   Edit,
   Create,
   SimpleForm,
   TextInput,
   ImageField,
+  useDataProvider,
+  useRecordContext,
+  useNotify,
 } from "react-admin";
+import {
+  Autocomplete,
+  TextField as MuiTextField,
+  Chip,
+  Box,
+  Typography,
+  CircularProgress,
+} from "@mui/material";
 import { StatusChipField, PRODUCT_STATUS, ImageUploadInput } from "../shared";
+import { ProductImageManager } from "./ProductImageManager";
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
 
@@ -116,7 +127,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false}>
+            <Datagrid bulkActionButtons={false} rowClick="edit">
               <ImageField
                 source="url"
                 sx={{
@@ -205,11 +216,183 @@ export function ProductShow() {
   );
 }
 
+// ─── JunctionManyInput ────────────────────────────────────────────────────────
+//
+// Handles many-to-many relationships through a junction table.
+// On an existing product (Edit), it reads current rows from the junction table,
+// shows them as chips, and on save it deletes removed rows and creates new ones.
+// On Create it does nothing (product_id doesn't exist yet) — manage from Edit.
+
+type JunctionOption = { id: string; label: string };
+
+function JunctionManyInput({
+  label,
+  junctionResource, // e.g. "product_category_products"
+  junctionForeignKey, // e.g. "category_id"
+  lookupResource, // e.g. "product_categories"
+  optionText, // field to show in dropdown, e.g. "name"
+}: {
+  label: string;
+  junctionResource: string;
+  junctionForeignKey: string;
+  lookupResource: string;
+  optionText: string;
+}) {
+  const record = useRecordContext();
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+
+  const [options, setOptions] = useState<JunctionOption[]>([]);
+  const [selected, setSelected] = useState<JunctionOption[]>([]);
+  const [currentJunctionRows, setCurrentJunctionRows] = useState<
+    { id: string; foreignId: string }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load all available options from the lookup table
+  useEffect(() => {
+    dataProvider
+      .getList(lookupResource, {
+        pagination: { page: 1, perPage: 200 },
+        sort: { field: optionText, order: "ASC" },
+        filter: {},
+      })
+      .then(({ data }) => {
+        setOptions(
+          data.map((r: Record<string, unknown>) => ({
+            id: r.id as string,
+            label: r[optionText] as string,
+          })),
+        );
+      });
+  }, [lookupResource, optionText, dataProvider]);
+
+  // Load current junction rows for this product
+  useEffect(() => {
+    if (!record?.id) {
+      setLoading(false);
+      return;
+    }
+    dataProvider
+      .getList(junctionResource, {
+        pagination: { page: 1, perPage: 200 },
+        sort: { field: "id", order: "ASC" },
+        filter: { product_id: record.id },
+      })
+      .then(({ data }) => {
+        const rows = data.map((r: Record<string, unknown>) => ({
+          id: r.id as string,
+          foreignId: r[junctionForeignKey] as string,
+        }));
+        setCurrentJunctionRows(rows);
+        // Match to options labels once options are loaded
+        setSelected(
+          rows.map((r) => {
+            const opt = options.find((o) => o.id === r.foreignId);
+            return { id: r.foreignId, label: opt?.label ?? r.foreignId };
+          }),
+        );
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [record?.id, junctionResource, junctionForeignKey]);
+
+  // Re-resolve labels once options are loaded
+  useEffect(() => {
+    if (options.length === 0) return;
+    setSelected((prev) =>
+      prev.map((s) => {
+        const opt = options.find((o) => o.id === s.id);
+        return opt ? { id: s.id, label: opt.label } : s;
+      }),
+    );
+  }, [options]);
+
+  const handleChange = useCallback(
+    async (_: unknown, newValue: JunctionOption[]) => {
+      if (!record?.id) return;
+
+      const addedIds = newValue
+        .filter((v) => !selected.find((s) => s.id === v.id))
+        .map((v) => v.id);
+      const removedIds = selected
+        .filter((s) => !newValue.find((v) => v.id === s.id))
+        .map((s) => s.id);
+
+      // Delete removed junction rows
+      for (const foreignId of removedIds) {
+        const row = currentJunctionRows.find((r) => r.foreignId === foreignId);
+        if (row) {
+          await dataProvider.delete(junctionResource, {
+            id: row.id,
+            previousData: row,
+          });
+          setCurrentJunctionRows((prev) => prev.filter((r) => r.id !== row.id));
+        }
+      }
+
+      // Create new junction rows
+      for (const foreignId of addedIds) {
+        const created = await dataProvider.create(junctionResource, {
+          data: { product_id: record.id, [junctionForeignKey]: foreignId },
+        });
+        setCurrentJunctionRows((prev) => [
+          ...prev,
+          { id: created.data.id, foreignId },
+        ]);
+      }
+
+      setSelected(newValue);
+      notify(`${label} updated`, { type: "success" });
+    },
+    [
+      record?.id,
+      selected,
+      currentJunctionRows,
+      junctionResource,
+      junctionForeignKey,
+      dataProvider,
+      notify,
+      label,
+    ],
+  );
+
+  // On Create the record doesn't exist yet — hide entirely, manage from Edit
+  if (!record?.id) return null;
+
+  return (
+    <Box sx={{ mb: 2, maxWidth: 500 }}>
+      {loading ? (
+        <CircularProgress size={20} />
+      ) : (
+        <Autocomplete
+          multiple
+          options={options}
+          value={selected}
+          getOptionLabel={(o) => o.label}
+          isOptionEqualToValue={(a, b) => a.id === b.id}
+          onChange={handleChange}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip
+                key={index}
+                label={option.label}
+                size="small"
+                {...getTagProps({ index })}
+              />
+            ))
+          }
+          renderInput={(params) => (
+            <MuiTextField {...params} label={label} size="small" />
+          )}
+        />
+      )}
+    </Box>
+  );
+}
+
 // ─── Shared form fields ───────────────────────────────────────────────────────
-// Categories, collections, and tags are junction tables — react-admin handles
-// them via ReferenceArrayInput + AutocompleteArrayInput which reads/writes the
-// junction table automatically when the dataProvider supports many-to-many.
-// The source uses the junction table resource name and the foreign key array.
 
 function ProductFormFields({ isCreate = false }: { isCreate?: boolean }) {
   return (
@@ -228,14 +411,12 @@ function ProductFormFields({ isCreate = false }: { isCreate?: boolean }) {
         choices={PRODUCT_STATUS}
         defaultValue={isCreate ? "draft" : undefined}
       />
-
       <ImageUploadInput
         source="thumbnail"
         bucket="products"
         path="thumbnails"
         label="Thumbnail"
       />
-
       <BooleanInput
         source="is_giftcard"
         label="Gift Card"
@@ -244,32 +425,27 @@ function ProductFormFields({ isCreate = false }: { isCreate?: boolean }) {
       <BooleanInput source="discountable" defaultValue={true} />
       <TextInput source="external_id" />
 
-      {/* Categories — many-to-many via product_category_products */}
-      <ReferenceArrayInput
-        source="category_ids"
-        reference="product_categories"
+      <JunctionManyInput
         label="Categories"
-      >
-        <AutocompleteArrayInput optionText="name" />
-      </ReferenceArrayInput>
-
-      {/* Collections — many-to-many via product_collection_products */}
-      <ReferenceArrayInput
-        source="collection_ids"
-        reference="product_collections"
+        junctionResource="product_category_products"
+        junctionForeignKey="category_id"
+        lookupResource="product_categories"
+        optionText="name"
+      />
+      <JunctionManyInput
         label="Collections"
-      >
-        <AutocompleteArrayInput optionText="title" />
-      </ReferenceArrayInput>
-
-      {/* Tags — many-to-many via product_tag_products */}
-      <ReferenceArrayInput
-        source="tag_ids"
-        reference="product_tags"
+        junctionResource="product_collection_products"
+        junctionForeignKey="collection_id"
+        lookupResource="product_collections"
+        optionText="title"
+      />
+      <JunctionManyInput
         label="Tags"
-      >
-        <AutocompleteArrayInput optionText="value" />
-      </ReferenceArrayInput>
+        junctionResource="product_tag_products"
+        junctionForeignKey="tag_id"
+        lookupResource="product_tags"
+        optionText="value"
+      />
     </>
   );
 }
@@ -281,6 +457,7 @@ export function ProductEdit() {
     <Edit>
       <SimpleForm>
         <ProductFormFields />
+        <ProductImageManager />
       </SimpleForm>
     </Edit>
   );

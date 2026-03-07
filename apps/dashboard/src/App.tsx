@@ -18,7 +18,8 @@ import { pepLightTheme, pepDarkTheme } from ".//theme/theme";
 
 const instanceUrl = import.meta.env.VITE_SUPABASE_URL;
 const apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabaseClient = createClient(instanceUrl, apiKey);
+// const supabaseClient = createClient(instanceUrl, apiKey);
+export const supabaseClient = createClient(instanceUrl, apiKey);
 
 const dataProvider = supabaseDataProvider({
   instanceUrl,

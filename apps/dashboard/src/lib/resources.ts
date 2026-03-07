@@ -74,6 +74,8 @@ import {
   ProductTagShow,
   ProductTagEdit,
   ProductTagCreate,
+  ProductImageCreate,
+  ProductImageEdit,
 } from "../admin/resources/products/subResources";
 
 // Customers
@@ -120,6 +122,8 @@ import {
   PromotionCreate,
   PromotionRuleList,
   PromotionRuleShow,
+  PromotionRuleCreate,
+  PromotionRuleEdit,
 } from "../admin/resources/promotions/index";
 
 // Inventory
@@ -302,7 +306,12 @@ export const resources: ResourceProps[] = [
   // Junction/child tables — registered for reference fields, no UI
   { name: "product_options", icon: Settings },
   { name: "product_option_values", icon: Grid },
-  { name: "product_images", icon: Image },
+  {
+    name: "product_images",
+    icon: Image,
+    create: ProductImageCreate,
+    edit: ProductImageEdit,
+  },
   { name: "product_category_products", icon: Layers },
   { name: "product_collection_products", icon: BookOpen },
   { name: "product_tag_products", icon: Tag },
@@ -395,6 +404,8 @@ export const resources: ResourceProps[] = [
     icon: Settings,
     list: PromotionRuleList,
     show: PromotionRuleShow,
+    create: PromotionRuleCreate,
+    edit: PromotionRuleEdit,
   },
   // promotion_usages: read-only audit log
   { name: "promotion_usages", icon: BarChart2 },

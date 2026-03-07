@@ -14,11 +14,9 @@ import {
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { supabaseClient } from "../../App";
 
-// ─── Re-export DateTimeInput for convenience ──────────────────────────────────
 export { RaDateTimeInput as DateTimeInput };
-
-// ─── Enum choices ─────────────────────────────────────────────────────────────
 
 export const ORDER_STATUS = [
   { id: "pending", name: "Pending" },
@@ -196,7 +194,6 @@ const STATUS_COLORS: Record<string, ChipColor> = {
 
 export function StatusChipField({
   source,
-  label,
 }: {
   source: string;
   label?: string;
@@ -216,7 +213,6 @@ export function StatusChipField({
 
 // ─── CentsField ───────────────────────────────────────────────────────────────
 
-/** Renders an integer cents value as formatted currency, e.g. 1099 → R 10.99 */
 export function CentsField({
   source,
   currencySource,
@@ -246,14 +242,6 @@ export function CentsField({
 
 // ─── ImageUploadInput ─────────────────────────────────────────────────────────
 
-/**
- * A file upload input that uploads to Supabase Storage via the storage-upload
- * edge function and stores the resulting public URL in the form field.
- *
- * Usage:
- *   <ImageUploadInput source="thumbnail" bucket="products" path="thumbnails" />
- *   <ImageUploadInput source="avatar_url" bucket="avatars" />
- */
 export function ImageUploadInput({
   source,
   bucket,
@@ -283,6 +271,11 @@ export function ImageUploadInput({
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+        const {
+          data: { session },
+        } = await supabaseClient.auth.getSession();
+        const token = session?.access_token ?? supabaseKey;
+
         const formData = new FormData();
         formData.append("file", file);
         formData.append("bucket", bucket);
@@ -291,7 +284,7 @@ export function ImageUploadInput({
         const res = await fetch(`${supabaseUrl}/functions/v1/storage-upload`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${supabaseKey}`,
+            Authorization: `Bearer ${token}`,
           },
           body: formData,
         });
@@ -325,7 +318,6 @@ export function ImageUploadInput({
         {label ?? source.replace(/_/g, " ")}
       </Typography>
 
-      {/* Preview current image if URL exists */}
       {currentUrl && (
         <Box sx={{ mb: 1 }}>
           <img
@@ -366,7 +358,6 @@ export function ImageUploadInput({
         )}
       </Stack>
 
-      {/* URL text field — allows manual paste too */}
       <input
         type="text"
         placeholder="or paste a URL"
