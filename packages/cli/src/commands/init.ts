@@ -151,7 +151,10 @@ export async function initCommand(options: InitOptions): Promise<void> {
     "cart-checkout",
     "order-confirmed",
     "payment-webhook",
-    "inventory-reserve",
+    "admin-accept-invite",
+    "admin-send-invite",
+    "storage-upload",
+    "storage-delete",
   ]
 
   const mappings: FileMapping[] = [
@@ -183,9 +186,9 @@ export async function initCommand(options: InitOptions): Promise<void> {
 
     // Import map for edge functions
     {
-      src: path.join(TEMPLATES_DIR, "functions", "import_map.json"),
-      dest: path.join(functionsDestDir, "import_map.json"),
-      description: "Edge function import map",
+      src: path.join(TEMPLATES_DIR, "functions", "deno.json"),
+      dest: path.join(functionsDestDir, "deno.json"),
+      description: "Edge function import map (for absolute imports in edge functions)",
     },
 
     // SQL files
@@ -213,6 +216,13 @@ export async function initCommand(options: InitOptions): Promise<void> {
       src: path.join(TEMPLATES_DIR, "drop-dbs.sql"),
       dest: path.join(projectDir, "supabase", "drop-dbs.sql"),
       description: "SQL script to drop databases",
+    },
+
+    // config.toml file for overriding the jwt verify done by the supabase platform for functions
+    {
+      src: path.join(TEMPLATES_DIR, "config.toml"),
+      dest: path.join(projectDir, "supabase", "config.toml"),
+      description: "Config file for overriding JWT verification in Supabase Edge Functions",
     },
 
     // Drizzle config example
