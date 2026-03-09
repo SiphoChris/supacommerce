@@ -48,7 +48,7 @@ export function CustomerList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="first_name" />
         <TextField source="last_name" />
         <EmailField source="email" />
@@ -98,7 +98,7 @@ export function CustomerShow() {
             target="customer_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false}>
+            <Datagrid bulkActionButtons={true}>
               <TextField source="address_1" />
               <TextField source="address_2" />
               <TextField source="city" />
@@ -116,7 +116,7 @@ export function CustomerShow() {
             target="customer_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false} rowClick="show">
+            <Datagrid bulkActionButtons={true} rowClick="show">
               <TextField source="display_id" label="Order #" />
               <TextField source="status" />
               <CentsField source="total" currencySource="currency_code" />
@@ -193,7 +193,7 @@ export function CustomerGroupList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="name" />
         <TextField source="description" />
         <DateField source="created_at" showTime />
@@ -218,7 +218,7 @@ export function CustomerGroupShow() {
             target="group_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false} rowClick="show">
+            <Datagrid bulkActionButtons={true} rowClick="show">
               <TextField source="first_name" />
               <TextField source="last_name" />
               <EmailField source="email" />

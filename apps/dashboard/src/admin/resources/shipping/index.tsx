@@ -52,7 +52,7 @@ export function ShippingOptionList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="name" />
         <ReferenceField source="region_id" reference="regions" link="show">
           <TextField source="name" label="Region" />
@@ -215,7 +215,7 @@ export function ShippingProfileList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="name" />
         <StatusChipField source="type" />
         <DateField source="created_at" showTime />
@@ -268,7 +268,7 @@ export function ShippingProfileCreate() {
 export function FulfillmentProviderList() {
   return (
     <List sort={{ field: "id", order: "ASC" }}>
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="id" label="Provider ID" />
         <BooleanField source="is_installed" />
         <DateField source="created_at" showTime />

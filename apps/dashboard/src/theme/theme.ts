@@ -28,7 +28,7 @@ export const pepLightTheme: RaThemeOptions = deepmerge(defaultTheme, {
     secondary: {
       main: PEP_LIME,
       dark: PEP_LIME_DARK,
-      light: "#D8FC66",
+      light: PEP_LIME,
       contrastText: "#0A1A00",
     },
     background: {
@@ -200,7 +200,7 @@ export const pepDarkTheme: RaThemeOptions = deepmerge(defaultTheme, {
           backgroundColor: "#0C1E30",
           color: "#E8F4FF",
           boxShadow: "none",
-          borderBottom: `3px solid ${PEP_LIME}`,
+          borderBottom: `6px solid ${PEP_LIME}`,
         },
       },
     },

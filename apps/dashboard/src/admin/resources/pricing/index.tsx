@@ -53,7 +53,7 @@ export function PriceList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <ReferenceField
           source="price_set_id"
           reference="price_sets"
@@ -172,7 +172,7 @@ export function PriceSetList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <ReferenceField
           source="variant_id"
           reference="product_variants"
@@ -208,7 +208,7 @@ export function PriceSetShow() {
             target="price_set_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false}>
+            <Datagrid bulkActionButtons={true}>
               <TextField source="currency_code" />
               <CentsField source="amount" />
               <TextField source="min_quantity" />
@@ -254,7 +254,7 @@ export function PriceListList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="name" />
         <StatusChipField source="status" />
         <StatusChipField source="type" />
@@ -285,7 +285,7 @@ export function PriceListShow() {
             target="price_list_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false}>
+            <Datagrid bulkActionButtons={true}>
               <ReferenceField
                 source="variant_id"
                 reference="product_variants"

@@ -46,7 +46,7 @@ export function RegionList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="name" />
         <TextField source="currency_code" label="Currency" />
         <TextField source="tax_rate" />
@@ -77,7 +77,7 @@ export function RegionShow() {
             target="region_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false}>
+            <Datagrid bulkActionButtons={true}>
               <TextField source="name" />
               <TextField source="iso2" />
               <TextField source="iso3" />
@@ -149,7 +149,7 @@ export function CountryList() {
       }
       sort={{ field: "name", order: "ASC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="name" />
         <TextField source="iso2" label="ISO2" />
         <TextField source="iso3" label="ISO3" />
@@ -241,7 +241,7 @@ export function CurrencyList() {
       }
       sort={{ field: "code", order: "ASC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="code" />
         <TextField source="name" />
         <TextField source="symbol" />
@@ -314,7 +314,7 @@ export function TaxRegionList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="name" />
         <TextField source="country_code" label="Country" />
         <TextField source="province_code" label="Province" emptyText="—" />
@@ -358,7 +358,7 @@ export function TaxRegionShow() {
             target="tax_region_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false} rowClick="show">
+            <Datagrid bulkActionButtons={true} rowClick="show">
               <TextField source="name" />
               <TextField source="code" />
               <NumberField source="rate" />
@@ -439,7 +439,7 @@ export function TaxRateList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="name" />
         <TextField source="code" />
         <NumberField source="rate" />

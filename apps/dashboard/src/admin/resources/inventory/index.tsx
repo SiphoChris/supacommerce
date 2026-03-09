@@ -45,7 +45,7 @@ export function InventoryItemList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="sku" />
         <TextField source="description" />
         <ReferenceField
@@ -92,7 +92,7 @@ export function InventoryItemShow() {
             target="inventory_item_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false}>
+            <Datagrid bulkActionButtons={true}>
               <ReferenceField
                 source="location_id"
                 reference="stock_locations"
@@ -165,7 +165,7 @@ export function InventoryItemCreate() {
 export function InventoryLevelList() {
   return (
     <List sort={{ field: "updated_at", order: "DESC" }}>
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <ReferenceField
           source="inventory_item_id"
           reference="inventory_items"
@@ -283,7 +283,7 @@ export function StockLocationList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <TextField source="name" />
         <TextField source="city" />
         <TextField source="country_code" label="Country" />

@@ -18,7 +18,76 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
-import { supabaseClient } from "../../../App";
+
+/**
+ * Extracts the storage object path from a Supabase public URL.
+ * e.g. https://<project>.supabase.co/storage/v1/object/public/products/images/123_file.jpg
+ *      → bucket: "products", path: "images/123_file.jpg"
+ */
+function parseStoragePath(
+  url: string,
+): { bucket: string; path: string } | null {
+  try {
+    const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+    if (!match) return null;
+    return { bucket: match[1], path: match[2] };
+  } catch {
+    return null;
+  }
+}
+
+function getStoredToken(): string {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  try {
+    const projectId = new URL(supabaseUrl).hostname.split(".")[0];
+    const raw = localStorage.getItem(`sb-${projectId}-auth-token`);
+    if (raw) {
+      const data = JSON.parse(raw);
+      return data?.access_token ?? data?.session?.access_token ?? supabaseKey;
+    }
+  } catch {
+    /* fall through */
+  }
+  return supabaseKey;
+}
+
+async function deleteStorageFile(url: string): Promise<void> {
+  const parsed = parseStoragePath(url);
+  if (!parsed) return;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const token = getStoredToken();
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/storage-delete`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ bucket: parsed.bucket, paths: [parsed.path] }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      console.warn("Storage delete failed:", res.status, body);
+    }
+  } catch (err) {
+    console.warn("Storage delete error:", err);
+  }
+}
+
+/**
+ * ProductImageManager
+ *
+ * A self-contained component that:
+ *   1. Shows all existing product_images for the current product as a gallery
+ *   2. Accepts new images via drag-and-drop or file browser (multi-select)
+ *   3. Uploads each file to Supabase Storage via the storage-upload edge function
+ *   4. Creates a product_images row for each uploaded file
+ *   5. Allows deleting existing images
+ *
+ * Used inside ProductEdit — requires a product record context (i.e. must be
+ * inside an Edit or Show component so useRecordContext returns the product).
+ */
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -61,6 +130,7 @@ export function ProductImageManager() {
   const [deleteTarget, setDeleteTarget] = useState<ProductImage | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Load existing images on first render
   if (existingImages === null && !loadingExisting && record?.id) {
     setLoadingExisting(true);
     dataProvider
@@ -85,6 +155,7 @@ export function ProductImageManager() {
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
       setPendingFiles((prev) =>
         prev.map((f) =>
           f.id === pending.id ? { ...f, status: "uploading" } : f,
@@ -92,12 +163,9 @@ export function ProductImageManager() {
       );
 
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        console.log("session", session);
-        const token = session?.access_token ?? supabaseKey;
-        console.log("token being sent", token);
+        // Use the active session JWT so the edge function can verify admin identity.
+        // The anon key alone will fail the admin_users check in storage-upload.
+        const token = getStoredToken();
 
         const formData = new FormData();
         formData.append("file", pending.file);
@@ -109,12 +177,12 @@ export function ProductImageManager() {
           headers: { Authorization: `Bearer ${token}` },
           body: formData,
         });
-        // ... rest unchanged
 
         const json = await res.json();
         if (!res.ok || !json.url)
           throw new Error(json.error ?? "Upload failed");
 
+        // Create the product_images row
         const nextRank =
           (existingImages?.length ?? 0) +
           pendingFiles.filter((f) => f.status === "done").length;
@@ -133,6 +201,7 @@ export function ProductImageManager() {
           prev.map((f) => (f.id === pending.id ? { ...f, status: "done" } : f)),
         );
 
+        // Refresh existing images list
         const { data } = await dataProvider.getList("product_images", {
           pagination: { page: 1, perPage: 100 },
           sort: { field: "rank", order: "ASC" },
@@ -183,6 +252,7 @@ export function ProductImageManager() {
 
       setPendingFiles((prev) => [...prev, ...valid]);
 
+      // Start uploading immediately
       for (const pending of valid) {
         uploadFile(pending);
       }
@@ -201,6 +271,11 @@ export function ProductImageManager() {
 
   const handleDelete = useCallback(
     async (image: ProductImage) => {
+      // Delete the storage object first, then the database row.
+      // If storage delete fails we still remove the row — the file becomes
+      // orphaned but the record is gone, which is the safer outcome.
+      await deleteStorageFile(image.url);
+
       await dataProvider.delete("product_images", {
         id: image.id,
         previousData: image,
@@ -234,6 +309,7 @@ export function ProductImageManager() {
         Product Images
       </Typography>
 
+      {/* ── Existing images gallery ── */}
       {loadingExisting ? (
         <CircularProgress size={20} sx={{ mb: 2 }} />
       ) : existingImages && existingImages.length > 0 ? (
@@ -293,6 +369,7 @@ export function ProductImageManager() {
         </Typography>
       )}
 
+      {/* ── Dropzone ── */}
       <Box
         onDrop={handleDrop}
         onDragOver={(e) => {
@@ -338,6 +415,7 @@ export function ProductImageManager() {
         />
       </Box>
 
+      {/* ── Upload progress ── */}
       {pendingFiles.length > 0 && (
         <Box sx={{ mt: 2, maxWidth: 480 }}>
           {uploading && <LinearProgress sx={{ mb: 1, borderRadius: 1 }} />}
@@ -408,6 +486,7 @@ export function ProductImageManager() {
         </Box>
       )}
 
+      {/* ── Delete confirm dialog ── */}
       <Confirm
         isOpen={!!deleteTarget}
         title="Delete image"

@@ -30,7 +30,6 @@ import {
   TextField as MuiTextField,
   Chip,
   Box,
-  Typography,
   CircularProgress,
 } from "@mui/material";
 import { StatusChipField, PRODUCT_STATUS, ImageUploadInput } from "../shared";
@@ -61,7 +60,7 @@ export function ProductList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={false}>
+      <Datagrid rowClick="show" bulkActionButtons={true}>
         <ImageField
           source="thumbnail"
           label=""
@@ -111,7 +110,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false} rowClick="show">
+            <Datagrid bulkActionButtons={true} rowClick="show">
               <TextField source="title" />
               <TextField source="sku" />
               <TextField source="barcode" />
@@ -127,7 +126,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false} rowClick="edit">
+            <Datagrid bulkActionButtons={true} rowClick="edit">
               <ImageField
                 source="url"
                 sx={{
@@ -151,7 +150,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false} rowClick="show">
+            <Datagrid bulkActionButtons={true} rowClick="show">
               <TextField source="title" />
               <TextField source="rank" />
             </Datagrid>
@@ -164,7 +163,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false}>
+            <Datagrid bulkActionButtons={true}>
               <ReferenceField
                 source="category_id"
                 reference="product_categories"
@@ -182,7 +181,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false}>
+            <Datagrid bulkActionButtons={true}>
               <ReferenceField
                 source="collection_id"
                 reference="product_collections"
@@ -200,7 +199,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={false}>
+            <Datagrid bulkActionButtons={true}>
               <ReferenceField
                 source="tag_id"
                 reference="product_tags"

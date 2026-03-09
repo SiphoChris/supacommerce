@@ -14,9 +14,74 @@ import {
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import { supabaseClient } from "../../App";
 
+// ─── Re-export DateTimeInput for convenience ──────────────────────────────────
 export { RaDateTimeInput as DateTimeInput };
+
+// ─── Storage helper ───────────────────────────────────────────────────────────
+
+/**
+ * Extracts the storage object path from a Supabase public URL.
+ * e.g. https://<project>.supabase.co/storage/v1/object/public/products/thumbnails/123_file.jpg
+ *      → bucket: "products", path: "thumbnails/123_file.jpg"
+ */
+function parseStoragePath(
+  url: string,
+): { bucket: string; path: string } | null {
+  try {
+    const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+    if (!match) return null;
+    return { bucket: match[1], path: match[2] };
+  } catch {
+    return null;
+  }
+}
+
+/** Reads the active JWT from localStorage — works even with multiple GoTrueClient instances. */
+function getStoredToken(): string {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  try {
+    const projectId = new URL(supabaseUrl).hostname.split(".")[0];
+    const raw = localStorage.getItem(`sb-${projectId}-auth-token`);
+    if (raw) {
+      const data = JSON.parse(raw);
+      return data?.access_token ?? data?.session?.access_token ?? supabaseKey;
+    }
+  } catch {
+    /* fall through */
+  }
+  return supabaseKey;
+}
+
+/**
+ * Deletes a file from Supabase Storage via the REST API.
+ * Uses the stored JWT directly — avoids the multi-GoTrueClient session issue.
+ */
+async function deleteStorageFile(url: string): Promise<void> {
+  const parsed = parseStoragePath(url);
+  if (!parsed) return;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const token = getStoredToken();
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/storage-delete`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ bucket: parsed.bucket, paths: [parsed.path] }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      console.warn("Storage delete failed:", res.status, body);
+    }
+  } catch (err) {
+    console.warn("Storage delete error:", err);
+  }
+}
+
+// ─── Enum choices ─────────────────────────────────────────────────────────────
 
 export const ORDER_STATUS = [
   { id: "pending", name: "Pending" },
@@ -213,6 +278,7 @@ export function StatusChipField({
 
 // ─── CentsField ───────────────────────────────────────────────────────────────
 
+/** Renders an integer cents value as formatted currency, e.g. 1099 → R 10.99 */
 export function CentsField({
   source,
   currencySource,
@@ -242,6 +308,16 @@ export function CentsField({
 
 // ─── ImageUploadInput ─────────────────────────────────────────────────────────
 
+/**
+ * A file upload input that uploads to Supabase Storage via the storage-upload
+ * edge function and stores the resulting public URL in the form field.
+ *
+ * When replacing an existing image, the old file is deleted from Storage first.
+ *
+ * Usage:
+ *   <ImageUploadInput source="thumbnail" bucket="products" path="thumbnails" />
+ *   <ImageUploadInput source="avatar_url" bucket="avatars" />
+ */
 export function ImageUploadInput({
   source,
   bucket,
@@ -269,12 +345,11 @@ export function ImageUploadInput({
 
       try {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const token = getStoredToken();
 
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
-        const token = session?.access_token ?? supabaseKey;
+        // Delete the previous file from Storage before uploading the replacement
+        const previousUrl = field.value as string | undefined;
+        if (previousUrl) await deleteStorageFile(previousUrl);
 
         const formData = new FormData();
         formData.append("file", file);
@@ -283,9 +358,7 @@ export function ImageUploadInput({
 
         const res = await fetch(`${supabaseUrl}/functions/v1/storage-upload`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
           body: formData,
         });
 
@@ -318,6 +391,7 @@ export function ImageUploadInput({
         {label ?? source.replace(/_/g, " ")}
       </Typography>
 
+      {/* Preview current image if URL exists */}
       {currentUrl && (
         <Box sx={{ mb: 1 }}>
           <img
@@ -358,6 +432,7 @@ export function ImageUploadInput({
         )}
       </Stack>
 
+      {/* URL text field — allows manual paste too */}
       <input
         type="text"
         placeholder="or paste a URL"
