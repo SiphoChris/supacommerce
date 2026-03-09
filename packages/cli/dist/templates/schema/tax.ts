@@ -7,8 +7,8 @@ import {
   timestamp,
   real,
   index,
-} from "drizzle-orm/pg-core"
-import { regions } from "./regions.ts"
+} from "drizzle-orm/pg-core";
+import { regions } from "./regions.ts";
 
 /**
  * tax_regions
@@ -24,7 +24,9 @@ export const taxRegions = pgTable(
   "tax_regions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    regionId: uuid("region_id").references(() => regions.id, { onDelete: "cascade" }),
+    regionId: uuid("region_id").references(() => regions.id, {
+      onDelete: "cascade",
+    }),
 
     countryCode: varchar("country_code", { length: 2 }).notNull(),
 
@@ -36,15 +38,19 @@ export const taxRegions = pgTable(
     /** Reference ID in your external tax provider (TaxJar, Avalara, etc.) */
     providerId: varchar("provider_id", { length: 255 }),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
     index("tax_regions_country_code_idx").on(t.countryCode),
     index("tax_regions_region_id_idx").on(t.regionId),
-  ]
-)
+  ],
+);
 
 /**
  * tax_rates
@@ -71,11 +77,15 @@ export const taxRates = pgTable(
     isDefault: boolean("is_default").notNull().default(false),
     isActive: boolean("is_active").notNull().default(true),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (t) => [index("tax_rates_tax_region_id_idx").on(t.taxRegionId)]
-)
+  (t) => [index("tax_rates_tax_region_id_idx").on(t.taxRegionId)],
+);
 
 /**
  * tax_rate_product_categories
@@ -84,13 +94,14 @@ export const taxRates = pgTable(
  * e.g. Children's clothing at 0% in the UK while standard rate is 20%.
  */
 export const taxRateProductCategories = pgTable("tax_rate_product_categories", {
+  id: uuid("id").primaryKey().defaultRandom(),
   taxRateId: uuid("tax_rate_id")
     .notNull()
     .references(() => taxRates.id, { onDelete: "cascade" }),
   productCategoryId: uuid("product_category_id").notNull(),
-})
+});
 
-export type TaxRegion = typeof taxRegions.$inferSelect
-export type NewTaxRegion = typeof taxRegions.$inferInsert
-export type TaxRate = typeof taxRates.$inferSelect
-export type NewTaxRate = typeof taxRates.$inferInsert
+export type TaxRegion = typeof taxRegions.$inferSelect;
+export type NewTaxRegion = typeof taxRegions.$inferInsert;
+export type TaxRate = typeof taxRates.$inferSelect;
+export type NewTaxRate = typeof taxRates.$inferInsert;

@@ -40,6 +40,7 @@ export const salesChannels = pgTable("sales_channels", {
 export const salesChannelProducts = pgTable(
   "sales_channel_products",
   {
+    id: uuid("id").primaryKey().defaultRandom(),
     salesChannelId: uuid("sales_channel_id")
       .notNull()
       .references(() => salesChannels.id, { onDelete: "cascade" }),

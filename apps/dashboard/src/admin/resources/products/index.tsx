@@ -27,13 +27,16 @@ import {
   useListContext,
   useUnselectAll,
   useRefresh,
+  useRedirect,
+  useDelete,
+  Toolbar,
+  SaveButton,
 } from "react-admin";
 import {
   Autocomplete,
   TextField as MuiTextField,
   Chip,
   Box,
-  Typography,
   CircularProgress,
 } from "@mui/material";
 
@@ -205,6 +208,113 @@ function ProductBulkDeleteButton() {
     </button>
   );
 }
+// ─── DeleteWithStorageButton ──────────────────────────────────────────────────
+//
+// Single-product delete that cleans up storage before removing the DB row.
+// Used in both the Show and Edit toolbars.
+
+function DeleteWithStorageButton() {
+  const record = useRecordContext();
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const redirect = useRedirect();
+  const [deleteOne] = useDelete();
+  const [confirming, setConfirming] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleDelete = useCallback(async () => {
+    if (!record?.id) return;
+    setLoading(true);
+    try {
+      const allStorageUrls: string[] = [];
+
+      // Collect thumbnail
+      if (record.thumbnail) allStorageUrls.push(record.thumbnail as string);
+
+      // Fetch all product_images
+      try {
+        const { data: images } = await dataProvider.getList("product_images", {
+          pagination: { page: 1, perPage: 200 },
+          sort: { field: "rank", order: "ASC" },
+          filter: { product_id: record.id },
+        });
+        for (const img of images) {
+          if (img.url) allStorageUrls.push(img.url as string);
+        }
+      } catch {
+        /* non-fatal */
+      }
+
+      // Delete storage files first
+      if (allStorageUrls.length > 0) await deleteStorageFiles(allStorageUrls);
+
+      // Delete DB row — Postgres cascades the rest
+      await deleteOne("products", { id: record.id, previousData: record });
+      notify("Product deleted", { type: "success" });
+      redirect("list", "products");
+    } catch (err) {
+      notify("Delete failed", { type: "error" });
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setConfirming(false);
+    }
+  }, [record, dataProvider, notify, redirect, deleteOne]);
+
+  if (confirming) {
+    return (
+      <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+        <button
+          onClick={handleDelete}
+          disabled={loading}
+          style={{
+            background: "#d32f2f",
+            color: "#fff",
+            border: "none",
+            borderRadius: 4,
+            padding: "6px 16px",
+            cursor: "pointer",
+            fontSize: 13,
+          }}
+        >
+          {loading ? "Deleting..." : "Confirm delete"}
+        </button>
+        <button
+          onClick={() => setConfirming(false)}
+          disabled={loading}
+          style={{
+            background: "transparent",
+            border: "1px solid #ccc",
+            borderRadius: 4,
+            padding: "6px 16px",
+            cursor: "pointer",
+            fontSize: 13,
+          }}
+        >
+          Cancel
+        </button>
+      </Box>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setConfirming(true)}
+      style={{
+        background: "transparent",
+        color: "#d32f2f",
+        border: "1px solid #d32f2f",
+        borderRadius: 4,
+        padding: "6px 16px",
+        cursor: "pointer",
+        fontSize: 13,
+      }}
+    >
+      Delete
+    </button>
+  );
+}
+
 import { StatusChipField, PRODUCT_STATUS, ImageUploadInput } from "../shared";
 import { ProductImageManager } from "./ProductImageManager";
 
@@ -233,7 +343,7 @@ export function ProductList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={<ProductBulkDeleteButton />}>
+      <Datagrid rowClick="edit" bulkActionButtons={<ProductBulkDeleteButton />}>
         <ImageField
           source="thumbnail"
           label=""
@@ -623,10 +733,19 @@ function ProductFormFields({ isCreate = false }: { isCreate?: boolean }) {
 
 // ─── Edit ─────────────────────────────────────────────────────────────────────
 
+function ProductEditToolbar() {
+  return (
+    <Toolbar sx={{ justifyContent: "space-between" }}>
+      <SaveButton />
+      <DeleteWithStorageButton />
+    </Toolbar>
+  );
+}
+
 export function ProductEdit() {
   return (
     <Edit>
-      <SimpleForm>
+      <SimpleForm toolbar={<ProductEditToolbar />}>
         <ProductFormFields />
         <ProductImageManager />
       </SimpleForm>

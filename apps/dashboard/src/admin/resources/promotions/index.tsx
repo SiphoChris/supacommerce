@@ -58,7 +58,7 @@ export function PromotionList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={true}>
+      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
         <TextField source="code" emptyText="(automatic)" />
         <StatusChipField source="status" />
         <StatusChipField source="type" />
@@ -102,7 +102,7 @@ export function PromotionShow() {
             target="promotion_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={true}>
+            <Datagrid bulkActionButtons={undefined}>
               <TextField source="type" />
               <TextField source="value" />
               <TextField source="description" />
@@ -116,7 +116,7 @@ export function PromotionShow() {
             target="promotion_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={true}>
+            <Datagrid bulkActionButtons={undefined}>
               <ReferenceField
                 source="order_id"
                 reference="orders"
@@ -221,7 +221,7 @@ export function PromotionCreate() {
 export function PromotionRuleList() {
   return (
     <List sort={{ field: "created_at", order: "DESC" }}>
-      <Datagrid rowClick="show" bulkActionButtons={true}>
+      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
         <ReferenceField
           source="promotion_id"
           reference="promotions"

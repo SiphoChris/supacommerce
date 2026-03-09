@@ -45,7 +45,7 @@ export function ProductVariantList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={true}>
+      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
         <ReferenceField source="product_id" reference="products" link="show">
           <TextField source="title" />
         </ReferenceField>
@@ -200,7 +200,7 @@ export function ProductCategoryList() {
       }
       sort={{ field: "rank", order: "ASC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={true}>
+      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
         <TextField source="name" />
         <TextField source="handle" />
         <ReferenceField
@@ -309,7 +309,7 @@ export function ProductCollectionList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={true}>
+      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
         <TextField source="title" />
         <TextField source="handle" />
         <DateField source="created_at" showTime />
@@ -372,7 +372,7 @@ export function ProductTagList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={true}>
+      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
         <TextField source="value" />
         <DateField source="created_at" showTime />
       </Datagrid>

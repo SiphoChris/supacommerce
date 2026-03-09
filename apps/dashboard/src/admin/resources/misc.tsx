@@ -8,8 +8,6 @@ import {
   BooleanInput,
   SelectInput,
   SearchInput,
-  NumberField,
-  NumberInput,
   FilterButton,
   TopToolbar,
   ExportButton,
@@ -19,14 +17,22 @@ import {
   TabbedShowLayout,
   ReferenceManyField,
   ReferenceField,
-  ReferenceInput,
   Edit,
   Create,
   SimpleForm,
   TextInput,
+  NumberField,
+  NumberInput,
+  ReferenceInput,
+  AutocompleteInput,
   DateTimeInput,
 } from "react-admin";
-import { StatusChipField, ImageUploadInput, ADMIN_ROLE } from "./shared";
+import {
+  StatusChipField,
+  CentsField,
+  ImageUploadInput,
+  ADMIN_ROLE,
+} from "./shared";
 
 // ─── Sales Channels ───────────────────────────────────────────────────────────
 
@@ -49,7 +55,7 @@ export function SalesChannelList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={true}>
+      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
         <TextField source="name" />
         <TextField source="description" />
         <BooleanField source="is_default" />
@@ -78,7 +84,7 @@ export function SalesChannelShow() {
             target="sales_channel_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={true}>
+            <Datagrid bulkActionButtons={undefined}>
               <ReferenceField
                 source="product_id"
                 reference="products"
@@ -141,7 +147,7 @@ export function AdminUserList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={true}>
+      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
         <TextField source="first_name" />
         <TextField source="last_name" />
         <EmailField source="email" />
@@ -206,7 +212,7 @@ export function AdminInvitationList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={true}>
+      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
         <EmailField source="email" />
         <StatusChipField source="role" />
         <DateField source="accepted_at" showTime />
@@ -280,7 +286,7 @@ export function AdminInvitationCreate() {
 
 const taxRegionFilters = [
   <SearchInput source="name@ilike" alwaysOn placeholder="Search by name" />,
-  <SearchInput source="country_code@ilike" label="Country code" />,
+  <SearchInput source="country_code@ilike" placeholder="Country code" />,
 ];
 
 export function TaxRegionList() {
@@ -296,7 +302,7 @@ export function TaxRegionList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={true}>
+      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
         <TextField source="name" />
         <TextField source="country_code" />
         <TextField source="province_code" />
@@ -314,6 +320,10 @@ export function TaxRegionShow() {
           <TextField source="name" />
           <TextField source="country_code" />
           <TextField source="province_code" />
+          <TextField source="provider_id" />
+          <ReferenceField source="region_id" reference="regions" link="show">
+            <TextField source="name" />
+          </ReferenceField>
           <DateField source="created_at" showTime />
           <DateField source="updated_at" showTime />
         </TabbedShowLayout.Tab>
@@ -323,12 +333,12 @@ export function TaxRegionShow() {
             target="tax_region_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={true} rowClick="show">
+            <Datagrid bulkActionButtons={undefined} rowClick="edit">
               <TextField source="name" />
-              <NumberField source="rate" />
               <TextField source="code" />
+              <NumberField source="rate" />
               <BooleanField source="is_default" />
-              <DateField source="created_at" showTime />
+              <BooleanField source="is_active" />
             </Datagrid>
           </ReferenceManyField>
         </TabbedShowLayout.Tab>
@@ -344,6 +354,10 @@ export function TaxRegionEdit() {
         <TextInput source="name" required />
         <TextInput source="country_code" required />
         <TextInput source="province_code" />
+        <TextInput source="provider_id" />
+        <ReferenceInput source="region_id" reference="regions">
+          <AutocompleteInput optionText="name" />
+        </ReferenceInput>
       </SimpleForm>
     </Edit>
   );
@@ -354,8 +368,16 @@ export function TaxRegionCreate() {
     <Create>
       <SimpleForm>
         <TextInput source="name" required />
-        <TextInput source="country_code" required />
-        <TextInput source="province_code" />
+        <TextInput
+          source="country_code"
+          required
+          helperText="2-letter ISO code, e.g. ZA"
+        />
+        <TextInput source="province_code" helperText="Optional, e.g. WC" />
+        <TextInput source="provider_id" />
+        <ReferenceInput source="region_id" reference="regions">
+          <AutocompleteInput optionText="name" />
+        </ReferenceInput>
       </SimpleForm>
     </Create>
   );
@@ -365,7 +387,7 @@ export function TaxRegionCreate() {
 
 const taxRateFilters = [
   <SearchInput source="name@ilike" alwaysOn placeholder="Search by name" />,
-  <SearchInput source="code@ilike" label="Code" />,
+  <BooleanInput source="is_active" label="Active" />,
   <BooleanInput source="is_default" label="Default" />,
 ];
 
@@ -382,10 +404,10 @@ export function TaxRateList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={true}>
+      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
         <TextField source="name" />
-        <NumberField source="rate" />
         <TextField source="code" />
+        <NumberField source="rate" />
         <ReferenceField
           source="tax_region_id"
           reference="tax_regions"
@@ -394,6 +416,7 @@ export function TaxRateList() {
           <TextField source="name" />
         </ReferenceField>
         <BooleanField source="is_default" />
+        <BooleanField source="is_active" />
         <DateField source="created_at" showTime />
       </Datagrid>
     </List>
@@ -405,8 +428,8 @@ export function TaxRateShow() {
     <Show>
       <SimpleShowLayout>
         <TextField source="name" />
-        <NumberField source="rate" />
         <TextField source="code" />
+        <NumberField source="rate" />
         <ReferenceField
           source="tax_region_id"
           reference="tax_regions"
@@ -415,6 +438,7 @@ export function TaxRateShow() {
           <TextField source="name" />
         </ReferenceField>
         <BooleanField source="is_default" />
+        <BooleanField source="is_active" />
         <DateField source="created_at" showTime />
         <DateField source="updated_at" showTime />
       </SimpleShowLayout>
@@ -427,12 +451,17 @@ export function TaxRateEdit() {
     <Edit>
       <SimpleForm>
         <TextInput source="name" required />
-        <NumberInput source="rate" required />
         <TextInput source="code" />
+        <NumberInput
+          source="rate"
+          required
+          helperText="Decimal rate, e.g. 0.15 = 15%"
+        />
         <ReferenceInput source="tax_region_id" reference="tax_regions">
-          <SelectInput optionText="name" required />
+          <AutocompleteInput optionText="name" />
         </ReferenceInput>
         <BooleanInput source="is_default" />
+        <BooleanInput source="is_active" defaultValue={true} />
       </SimpleForm>
     </Edit>
   );
@@ -443,12 +472,17 @@ export function TaxRateCreate() {
     <Create>
       <SimpleForm>
         <TextInput source="name" required />
-        <NumberInput source="rate" required />
         <TextInput source="code" />
+        <NumberInput
+          source="rate"
+          required
+          helperText="Decimal rate, e.g. 0.15 = 15%"
+        />
         <ReferenceInput source="tax_region_id" reference="tax_regions">
-          <SelectInput optionText="name" required />
+          <AutocompleteInput optionText="name" />
         </ReferenceInput>
         <BooleanInput source="is_default" defaultValue={false} />
+        <BooleanInput source="is_active" defaultValue={true} />
       </SimpleForm>
     </Create>
   );

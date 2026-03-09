@@ -221,41 +221,52 @@ begin
       limit 1;
 
       if v_inv_item.id is not null then
-        -- Lock the inventory level row and check available stock
-        select quantity_available into v_available
-        from public.inventory_levels
-        where inventory_item_id = v_inv_item.id
-          and location_id = v_location_id
-        for update;
-
-        -- Only reserve if stock is available. If not, raise to roll back
-        -- the entire transaction — caller should handle this case.
-        if v_available is null or v_available < v_line_item.quantity then
-          raise exception
-            'Insufficient stock for inventory item % at location % (available: %, requested: %)',
-            v_inv_item.id, v_location_id,
-            coalesce(v_available, 0), v_line_item.quantity
-            using errcode = 'P0003';
-        end if;
-
-        -- Create reservation record
-        insert into public.inventory_reservations (
-          inventory_item_id, location_id, line_item_id,
-          quantity, status
-        )
-        values (
-          v_inv_item.id, v_location_id, v_line_item.id,
-          v_line_item.quantity, 'confirmed'
-        );
-
-        -- Decrement quantity_available and increment reserved_quantity
-        update public.inventory_levels
+        -- Upgrade a pending reservation from cart-checkout to confirmed.
+        -- This avoids double-reserving stock that was already held at checkout.
+        update public.inventory_reservations
         set
-          reserved_quantity  = reserved_quantity + v_line_item.quantity,
-          quantity_available = quantity_available - v_line_item.quantity,
-          updated_at         = now()
+          status     = 'confirmed',
+          updated_at = now()
         where inventory_item_id = v_inv_item.id
-          and location_id = v_location_id;
+          and location_id       = v_location_id
+          and line_item_id      = v_line_item.id
+          and status            = 'pending';
+
+        -- If no pending reservation existed, create a confirmed one now.
+        -- Handles variants that had no inventory tracking at checkout time.
+        if not found then
+          -- Lock the inventory level row and check available stock
+          select quantity_available into v_available
+          from public.inventory_levels
+          where inventory_item_id = v_inv_item.id
+            and location_id = v_location_id
+          for update;
+
+          if v_available is null or v_available < v_line_item.quantity then
+            raise exception
+              'Insufficient stock for inventory item % at location % (available: %, requested: %)',
+              v_inv_item.id, v_location_id,
+              coalesce(v_available, 0), v_line_item.quantity
+              using errcode = 'P0003';
+          end if;
+
+          insert into public.inventory_reservations (
+            inventory_item_id, location_id, line_item_id,
+            quantity, status
+          )
+          values (
+            v_inv_item.id, v_location_id, v_line_item.id,
+            v_line_item.quantity, 'confirmed'
+          );
+
+          update public.inventory_levels
+          set
+            reserved_quantity  = reserved_quantity + v_line_item.quantity,
+            quantity_available = quantity_available - v_line_item.quantity,
+            updated_at         = now()
+          where inventory_item_id = v_inv_item.id
+            and location_id = v_location_id;
+        end if;
       end if;
     end loop;
   end if;
@@ -362,5 +373,32 @@ begin
     updated_at         = now()
   where inventory_item_id = v_reservation.inventory_item_id
     and location_id = v_reservation.location_id;
+end;
+$$;
+
+
+-- =============================================================================
+-- increment_promotion_usage
+--
+-- Atomically increments usage_count on a promotion by 1.
+-- Called by cart-checkout after recording a promotion_usage row.
+-- A dedicated RPC ensures the increment is a single atomic UPDATE
+-- rather than a read-modify-write in application code.
+-- =============================================================================
+
+create or replace function public.increment_promotion_usage(
+  p_promotion_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.promotions
+  set
+    usage_count = usage_count + 1,
+    updated_at  = now()
+  where id = p_promotion_id;
 end;
 $$;

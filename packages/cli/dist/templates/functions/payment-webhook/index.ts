@@ -52,8 +52,8 @@ Deno.serve(async (req: Request) => {
     //   }
     //
 
-    // For development only — parse body without verification
-    // REMOVE THIS in production and use the verified event above
+    // For development only — parse body without verification.
+    // REMOVE THIS in production and use the verified event above.
     if (Deno.env.get("ENVIRONMENT") !== "development") {
       return errorResponse(
         "Webhook signature verification not implemented",
@@ -65,7 +65,6 @@ Deno.serve(async (req: Request) => {
     // ── 2. Handle event types ────────────────────────────────────────────────
     switch (event.type) {
       case "payment_intent.succeeded": {
-        // Stripe: extract metadata from the PaymentIntent
         const paymentIntent = event.data.object;
         const providerSessionId = paymentIntent["id"] as string;
 
@@ -88,7 +87,8 @@ Deno.serve(async (req: Request) => {
           }
         ).payment_collections.order_id;
 
-        // ── 3. Call order-confirmed ─────────────────────────────────────────
+        // Call order-confirmed to atomically mark the order as processing
+        // and upgrade pending inventory reservations to confirmed.
         const confirmUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/order-confirmed`;
         const confirmResponse = await fetch(confirmUrl, {
           method: "POST",
@@ -112,25 +112,83 @@ Deno.serve(async (req: Request) => {
       }
 
       case "payment_intent.payment_failed": {
-        // TODO: handle failed payment.
-        // Options:
-        //   - Update payment_session status to "error"
-        //   - Release any inventory reservations
-        //   - Notify the customer
-        //
         const paymentIntent = event.data.object;
         const providerSessionId = paymentIntent["id"] as string;
 
+        // ── Find the payment session ────────────────────────────────────────
+        const { data: session } = await supabaseAdmin
+          .from("payment_sessions")
+          .select("id, payment_collection_id, payment_collections(order_id)")
+          .eq("provider_session_id", providerSessionId)
+          .single();
+
+        if (!session) {
+          console.error(
+            "Payment session not found for failed payment:",
+            providerSessionId,
+          );
+          return jsonResponse({ received: true });
+        }
+
+        const orderId = (
+          session as unknown as {
+            payment_collections: { order_id: string };
+          }
+        ).payment_collections.order_id;
+
+        // ── Mark payment session as failed ──────────────────────────────────
         await supabaseAdmin
           .from("payment_sessions")
           .update({ status: "error", updated_at: new Date().toISOString() })
           .eq("provider_session_id", providerSessionId);
 
+        // ── Release all pending inventory reservations for this order ────────
+        // cart-checkout created pending reservations — without releasing them
+        // quantity_available stays decremented forever even though no order
+        // was confirmed.
+        const { data: orderItems } = await supabaseAdmin
+          .from("order_line_items")
+          .select("id")
+          .eq("order_id", orderId);
+
+        if (orderItems && orderItems.length > 0) {
+          const lineItemIds = (orderItems as Array<{ id: string }>).map(
+            (i) => i.id,
+          );
+
+          const { data: reservations } = await supabaseAdmin
+            .from("inventory_reservations")
+            .select("id")
+            .in("line_item_id", lineItemIds)
+            .eq("status", "pending");
+
+          if (reservations && reservations.length > 0) {
+            await Promise.allSettled(
+              (reservations as Array<{ id: string }>).map(({ id }) =>
+                supabaseAdmin.rpc("release_inventory_reservation", {
+                  p_reservation_id: id,
+                }),
+              ),
+            );
+          }
+        }
+
+        // ── Cancel the order ─────────────────────────────────────────────────
+        // Mark the order as cancelled so it doesn't sit as pending forever.
+        await supabaseAdmin
+          .from("orders")
+          .update({
+            status: "cancelled",
+            payment_status: "cancelled",
+            cancelled_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", orderId);
+
         break;
       }
 
       default:
-        // Unhandled event — acknowledge receipt and ignore
         console.log("Unhandled webhook event type:", event.type);
     }
 
@@ -138,8 +196,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ received: true });
   } catch (err) {
     console.error("payment-webhook error:", err);
-    // Return 200 for unexpected errors to prevent infinite retries
-    // Log and investigate separately
+    // Return 200 for unexpected errors to prevent infinite retries.
+    // Log and investigate separately.
     return jsonResponse({
       received: true,
       error: "Internal error — check logs",
