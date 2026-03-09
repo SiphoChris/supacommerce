@@ -1,2 +1,5 @@
 [functions.storage-upload]
 verify_jwt = false
+
+[functions.storage-delete]
+verify_jwt = false

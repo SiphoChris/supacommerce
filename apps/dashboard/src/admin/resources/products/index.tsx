@@ -24,14 +24,187 @@ import {
   useDataProvider,
   useRecordContext,
   useNotify,
+  useListContext,
+  useUnselectAll,
+  useRefresh,
 } from "react-admin";
 import {
   Autocomplete,
   TextField as MuiTextField,
   Chip,
   Box,
+  Typography,
   CircularProgress,
 } from "@mui/material";
+
+// ─── ProductBulkDeleteButton ──────────────────────────────────────────────────
+//
+// Extends the default BulkDeleteButton to also delete thumbnail files from
+// Supabase Storage before removing the DB rows. Product images stored via
+// ProductImageManager are NOT deleted here — those belong to product_images
+// rows and must be cleaned up separately (or via a cascade delete trigger).
+
+function getStoredToken(): string {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  try {
+    const projectId = new URL(supabaseUrl).hostname.split(".")[0];
+    const raw = localStorage.getItem(`sb-${projectId}-auth-token`);
+    if (raw) {
+      const data = JSON.parse(raw);
+      return data?.access_token ?? data?.session?.access_token ?? supabaseKey;
+    }
+  } catch {
+    /* fall through */
+  }
+  return supabaseKey;
+}
+
+async function deleteStorageFiles(urls: string[]): Promise<void> {
+  const byBucket: Record<string, string[]> = {};
+  for (const url of urls) {
+    const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+    if (!match) continue;
+    const [, bucket, path] = match;
+    if (!byBucket[bucket]) byBucket[bucket] = [];
+    byBucket[bucket].push(path);
+  }
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const token = getStoredToken();
+
+  for (const [bucket, paths] of Object.entries(byBucket)) {
+    try {
+      const res = await fetch(`${supabaseUrl}/functions/v1/storage-delete`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ bucket, paths }),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        console.warn(`Storage bulk delete failed for ${bucket}:`, body);
+      }
+    } catch (err) {
+      console.warn("Storage bulk delete error:", err);
+    }
+  }
+}
+
+function ProductBulkDeleteButton() {
+  const { selectedIds, data } = useListContext();
+  const unselectAll = useUnselectAll("products");
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const [confirming, setConfirming] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleDelete = useCallback(async () => {
+    setLoading(true);
+    try {
+      const allStorageUrls: string[] = [];
+
+      // 1. Collect thumbnail URLs from the selected product rows already in memory
+      const thumbnailUrls = (data ?? [])
+        .filter(
+          (r: Record<string, unknown>) =>
+            selectedIds.includes(r.id as string) && r.thumbnail,
+        )
+        .map((r: Record<string, unknown>) => r.thumbnail as string);
+      allStorageUrls.push(...thumbnailUrls);
+
+      // 2. Fetch all product_images rows for every selected product
+      for (const productId of selectedIds) {
+        try {
+          const { data: images } = await dataProvider.getList(
+            "product_images",
+            {
+              pagination: { page: 1, perPage: 200 },
+              sort: { field: "rank", order: "ASC" },
+              filter: { product_id: productId },
+            },
+          );
+          for (const img of images) {
+            if (img.url) allStorageUrls.push(img.url as string);
+          }
+        } catch {
+          // Non-fatal — continue
+        }
+      }
+
+      // 3. Delete storage files BEFORE deleting DB rows
+      if (allStorageUrls.length > 0) await deleteStorageFiles(allStorageUrls);
+
+      // 4. Delete DB rows — Postgres cascades to product_images, variants, etc.
+      await dataProvider.deleteMany("products", { ids: selectedIds });
+      unselectAll();
+      refresh();
+      notify("Products deleted", { type: "success" });
+    } catch (err) {
+      notify("Delete failed", { type: "error" });
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setConfirming(false);
+    }
+  }, [selectedIds, data, dataProvider, unselectAll, notify]);
+
+  if (confirming) {
+    return (
+      <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+        <button
+          onClick={handleDelete}
+          disabled={loading}
+          style={{
+            background: "#d32f2f",
+            color: "#fff",
+            border: "none",
+            borderRadius: 4,
+            padding: "6px 16px",
+            cursor: "pointer",
+            fontSize: 13,
+          }}
+        >
+          {loading ? "Deleting..." : `Delete ${selectedIds.length} product(s)`}
+        </button>
+        <button
+          onClick={() => setConfirming(false)}
+          disabled={loading}
+          style={{
+            background: "transparent",
+            border: "1px solid #ccc",
+            borderRadius: 4,
+            padding: "6px 16px",
+            cursor: "pointer",
+            fontSize: 13,
+          }}
+        >
+          Cancel
+        </button>
+      </Box>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setConfirming(true)}
+      style={{
+        background: "transparent",
+        color: "#d32f2f",
+        border: "1px solid #d32f2f",
+        borderRadius: 4,
+        padding: "6px 16px",
+        cursor: "pointer",
+        fontSize: 13,
+      }}
+    >
+      Delete
+    </button>
+  );
+}
 import { StatusChipField, PRODUCT_STATUS, ImageUploadInput } from "../shared";
 import { ProductImageManager } from "./ProductImageManager";
 
@@ -60,7 +233,7 @@ export function ProductList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="show" bulkActionButtons={true}>
+      <Datagrid rowClick="show" bulkActionButtons={<ProductBulkDeleteButton />}>
         <ImageField
           source="thumbnail"
           label=""
@@ -110,7 +283,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={true} rowClick="show">
+            <Datagrid bulkActionButtons={false} rowClick="show">
               <TextField source="title" />
               <TextField source="sku" />
               <TextField source="barcode" />
@@ -126,7 +299,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={true} rowClick="edit">
+            <Datagrid bulkActionButtons={false} rowClick="edit">
               <ImageField
                 source="url"
                 sx={{
@@ -150,7 +323,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={true} rowClick="show">
+            <Datagrid bulkActionButtons={false} rowClick="show">
               <TextField source="title" />
               <TextField source="rank" />
             </Datagrid>
@@ -163,7 +336,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={true}>
+            <Datagrid bulkActionButtons={false}>
               <ReferenceField
                 source="category_id"
                 reference="product_categories"
@@ -181,7 +354,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={true}>
+            <Datagrid bulkActionButtons={false}>
               <ReferenceField
                 source="collection_id"
                 reference="product_collections"
@@ -199,7 +372,7 @@ export function ProductShow() {
             target="product_id"
             label={false}
           >
-            <Datagrid bulkActionButtons={true}>
+            <Datagrid bulkActionButtons={false}>
               <ReferenceField
                 source="tag_id"
                 reference="product_tags"
@@ -375,7 +548,6 @@ function JunctionManyInput({
           renderTags={(value, getTagProps) =>
             value.map((option, index) => (
               <Chip
-                key={index}
                 label={option.label}
                 size="small"
                 {...getTagProps({ index })}
