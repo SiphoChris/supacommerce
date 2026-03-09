@@ -31,13 +31,16 @@ import {
   useDelete,
   Toolbar,
   SaveButton,
+  ShowButton,
 } from "react-admin";
 import {
   Autocomplete,
   TextField as MuiTextField,
   Chip,
   Box,
+  Typography,
   CircularProgress,
+  Box,
 } from "@mui/material";
 
 // ─── ProductBulkDeleteButton ──────────────────────────────────────────────────
@@ -343,7 +346,7 @@ export function ProductList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="edit" bulkActionButtons={<ProductBulkDeleteButton />}>
+      <Datagrid rowClick="show" bulkActionButtons={<ProductBulkDeleteButton />}>
         <ImageField
           source="thumbnail"
           label=""
@@ -736,7 +739,10 @@ function ProductFormFields({ isCreate = false }: { isCreate?: boolean }) {
 function ProductEditToolbar() {
   return (
     <Toolbar sx={{ justifyContent: "space-between" }}>
-      <SaveButton />
+      <Box sx={{ display: "flex", gap: 1 }}>
+        <SaveButton />
+        <ShowButton />
+      </Box>
       <DeleteWithStorageButton />
     </Toolbar>
   );

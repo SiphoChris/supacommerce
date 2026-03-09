@@ -10,6 +10,7 @@ import {
   SearchInput,
   FilterButton,
   TopToolbar,
+  ShowButton,
   ExportButton,
   CreateButton,
   Show,
@@ -55,7 +56,7 @@ export function SalesChannelList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
+      <Datagrid rowClick="show" bulkActionButtons={undefined}>
         <TextField source="name" />
         <TextField source="description" />
         <BooleanField source="is_default" />
@@ -103,7 +104,13 @@ export function SalesChannelShow() {
 
 export function SalesChannelEdit() {
   return (
-    <Edit>
+    <Edit
+      actions={
+        <TopToolbar>
+          <ShowButton />
+        </TopToolbar>
+      }
+    >
       <SimpleForm>
         <TextInput source="name" required />
         <TextInput source="description" multiline />
@@ -302,7 +309,7 @@ export function TaxRegionList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
+      <Datagrid rowClick="show" bulkActionButtons={undefined}>
         <TextField source="name" />
         <TextField source="country_code" />
         <TextField source="province_code" />
@@ -349,7 +356,13 @@ export function TaxRegionShow() {
 
 export function TaxRegionEdit() {
   return (
-    <Edit>
+    <Edit
+      actions={
+        <TopToolbar>
+          <ShowButton />
+        </TopToolbar>
+      }
+    >
       <SimpleForm>
         <TextInput source="name" required />
         <TextInput source="country_code" required />

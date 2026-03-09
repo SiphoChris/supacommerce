@@ -9,6 +9,7 @@ import {
   SearchInput,
   FilterButton,
   TopToolbar,
+  ShowButton,
   CreateButton,
   ExportButton,
   Show,
@@ -48,7 +49,7 @@ export function CustomerList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
+      <Datagrid rowClick="show" bulkActionButtons={undefined}>
         <TextField source="first_name" />
         <TextField source="last_name" />
         <EmailField source="email" />
@@ -134,7 +135,13 @@ export function CustomerShow() {
 
 export function CustomerEdit() {
   return (
-    <Edit>
+    <Edit
+      actions={
+        <TopToolbar>
+          <ShowButton />
+        </TopToolbar>
+      }
+    >
       <SimpleForm>
         <TextInput source="first_name" />
         <TextInput source="last_name" />
@@ -193,7 +200,7 @@ export function CustomerGroupList() {
       }
       sort={{ field: "created_at", order: "DESC" }}
     >
-      <Datagrid rowClick="edit" bulkActionButtons={undefined}>
+      <Datagrid rowClick="show" bulkActionButtons={undefined}>
         <TextField source="name" />
         <TextField source="description" />
         <DateField source="created_at" showTime />
@@ -232,7 +239,13 @@ export function CustomerGroupShow() {
 
 export function CustomerGroupEdit() {
   return (
-    <Edit>
+    <Edit
+      actions={
+        <TopToolbar>
+          <ShowButton />
+        </TopToolbar>
+      }
+    >
       <SimpleForm>
         <TextInput source="name" required />
         <TextInput source="description" multiline />

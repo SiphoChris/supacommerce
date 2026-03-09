@@ -200,7 +200,7 @@ export const pepDarkTheme: RaThemeOptions = deepmerge(defaultTheme, {
           backgroundColor: "#0C1E30",
           color: "#E8F4FF",
           boxShadow: "none",
-          borderBottom: `6px solid ${PEP_LIME}`,
+          borderBottom: `3px solid ${PEP_LIME}`,
         },
       },
     },

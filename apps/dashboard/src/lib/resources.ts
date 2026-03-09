@@ -50,6 +50,7 @@ import {
 // Products
 import {
   ProductList,
+  ProductShow,
   ProductEdit,
   ProductCreate,
 } from "../admin/resources/products/index";
@@ -73,9 +74,11 @@ import {
 // Customers
 import {
   CustomerList,
+  CustomerShow,
   CustomerEdit,
   CustomerCreate,
   CustomerGroupList,
+  CustomerGroupShow,
   CustomerGroupEdit,
   CustomerGroupCreate,
 } from "../admin/resources/customers/index";
@@ -153,9 +156,11 @@ import {
 // Misc: sales channels, tax, admin
 import {
   SalesChannelList,
+  SalesChannelShow,
   SalesChannelEdit,
   SalesChannelCreate,
   TaxRegionList,
+  TaxRegionShow,
   TaxRegionEdit,
   TaxRegionCreate,
   TaxRateList,
@@ -233,6 +238,7 @@ export const resources: ResourceProps[] = [
     name: "products",
     icon: Package,
     list: ProductList,
+    show: ProductShow,
     edit: ProductEdit,
     create: ProductCreate,
   },
@@ -283,6 +289,7 @@ export const resources: ResourceProps[] = [
     name: "customers",
     icon: Users,
     list: CustomerList,
+    show: CustomerShow,
     edit: CustomerEdit,
     create: CustomerCreate,
   },
@@ -295,6 +302,7 @@ export const resources: ResourceProps[] = [
     name: "customer_groups",
     icon: UserCheck,
     list: CustomerGroupList,
+    show: CustomerGroupShow,
     edit: CustomerGroupEdit,
     create: CustomerGroupCreate,
   },
@@ -441,6 +449,7 @@ export const resources: ResourceProps[] = [
     name: "sales_channels",
     icon: Star,
     list: SalesChannelList,
+    show: SalesChannelShow,
     edit: SalesChannelEdit,
     create: SalesChannelCreate,
   },
@@ -451,6 +460,7 @@ export const resources: ResourceProps[] = [
     name: "tax_regions",
     icon: Globe,
     list: TaxRegionList,
+    show: TaxRegionShow,
     edit: TaxRegionEdit,
     create: TaxRegionCreate,
   },
