@@ -218,6 +218,7 @@ export const productVariants = pgTable(
     barcode: varchar("barcode", { length: 100 }),
     ean: varchar("ean", { length: 13 }),
     upc: varchar("upc", { length: 12 }),
+    thumbnail: text("thumbnail"),
 
     /** Grams */
     weight: integer("weight"),

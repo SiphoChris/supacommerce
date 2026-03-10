@@ -212,7 +212,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
     {
       src: path.join(TEMPLATES_DIR, "rls.sql"),
       dest: path.join(projectDir, "supabase", "rls.sql"),
-      description: "Row Level Security policies",
+      description: "Nuke and create new Row Level Security policies",
     },
     {
       src: path.join(TEMPLATES_DIR, "functions.sql"),
@@ -223,11 +223,6 @@ export async function initCommand(options: InitOptions): Promise<void> {
       src: path.join(TEMPLATES_DIR, "nuke-dbs.sql"),
       dest: path.join(projectDir, "supabase", "nuke-dbs.sql"),
       description: "SQL script to nuke databases",
-    },
-    {
-      src: path.join(TEMPLATES_DIR, "nuke-policies.sql"),
-      dest: path.join(projectDir, "supabase", "nuke-policies.sql"),
-      description: "SQL script to nuke RLS policies",
     },
     {
       src: path.join(TEMPLATES_DIR, "drop-dbs.sql"),

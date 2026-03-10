@@ -22,6 +22,116 @@
 
 
 -- =============================================================================
+-- Drop all existing policies before re-applying (idempotent)
+-- =============================================================================
+
+drop policy if exists "currencies_public_read" on public.currencies;
+drop policy if exists "currencies_admin_write" on public.currencies;
+drop policy if exists "regions_public_read" on public.regions;
+drop policy if exists "regions_admin_write" on public.regions;
+drop policy if exists "countries_public_read" on public.countries;
+drop policy if exists "countries_admin_write" on public.countries;
+drop policy if exists "customers_select_own" on public.customers;
+drop policy if exists "customers_insert_own" on public.customers;
+drop policy if exists "customers_update_own" on public.customers;
+drop policy if exists "customer_groups_public_read" on public.customer_groups;
+drop policy if exists "customer_groups_admin_write" on public.customer_groups;
+drop policy if exists "customer_addresses_select_own" on public.customer_addresses;
+drop policy if exists "customer_addresses_insert_own" on public.customer_addresses;
+drop policy if exists "customer_addresses_update_own" on public.customer_addresses;
+drop policy if exists "customer_addresses_delete_own" on public.customer_addresses;
+drop policy if exists "products_public_read" on public.products;
+drop policy if exists "products_admin_write" on public.products;
+drop policy if exists "product_variants_public_read" on public.product_variants;
+drop policy if exists "product_variants_admin_write" on public.product_variants;
+drop policy if exists "product_categories_public_read" on public.product_categories;
+drop policy if exists "product_categories_admin_write" on public.product_categories;
+drop policy if exists "product_category_products_public_read" on public.product_category_products;
+drop policy if exists "product_category_products_admin_write" on public.product_category_products;
+drop policy if exists "product_collections_public_read" on public.product_collections;
+drop policy if exists "product_collections_admin_write" on public.product_collections;
+drop policy if exists "product_collection_products_public_read" on public.product_collection_products;
+drop policy if exists "product_collection_products_admin_write" on public.product_collection_products;
+drop policy if exists "product_tags_public_read" on public.product_tags;
+drop policy if exists "product_tags_admin_write" on public.product_tags;
+drop policy if exists "product_tag_products_public_read" on public.product_tag_products;
+drop policy if exists "product_tag_products_admin_write" on public.product_tag_products;
+drop policy if exists "product_options_public_read" on public.product_options;
+drop policy if exists "product_options_admin_write" on public.product_options;
+drop policy if exists "product_option_values_public_read" on public.product_option_values;
+drop policy if exists "product_option_values_admin_write" on public.product_option_values;
+drop policy if exists "product_variant_option_values_public_read" on public.product_variant_option_values;
+drop policy if exists "product_variant_option_values_admin_write" on public.product_variant_option_values;
+drop policy if exists "product_images_public_read" on public.product_images;
+drop policy if exists "product_images_admin_write" on public.product_images;
+drop policy if exists "stock_locations_public_read" on public.stock_locations;
+drop policy if exists "stock_locations_admin_write" on public.stock_locations;
+drop policy if exists "inventory_items_authenticated_read" on public.inventory_items;
+drop policy if exists "inventory_items_admin_write" on public.inventory_items;
+drop policy if exists "inventory_levels_authenticated_read" on public.inventory_levels;
+drop policy if exists "inventory_levels_admin_write" on public.inventory_levels;
+drop policy if exists "inventory_reservations_admin_only" on public.inventory_reservations;
+drop policy if exists "price_sets_public_read" on public.price_sets;
+drop policy if exists "price_sets_admin_write" on public.price_sets;
+drop policy if exists "prices_public_read" on public.prices;
+drop policy if exists "prices_admin_write" on public.prices;
+drop policy if exists "price_lists_public_read" on public.price_lists;
+drop policy if exists "price_lists_admin_write" on public.price_lists;
+drop policy if exists "price_list_customer_groups_public_read" on public.price_list_customer_groups;
+drop policy if exists "price_list_customer_groups_admin_write" on public.price_list_customer_groups;
+drop policy if exists "price_list_prices_public_read" on public.price_list_prices;
+drop policy if exists "price_list_prices_admin_write" on public.price_list_prices;
+drop policy if exists "promotions_authenticated_read" on public.promotions;
+drop policy if exists "promotions_admin_write" on public.promotions;
+drop policy if exists "promotion_rules_authenticated_read" on public.promotion_rules;
+drop policy if exists "promotion_rules_admin_write" on public.promotion_rules;
+drop policy if exists "promotion_usages_own_read" on public.promotion_usages;
+drop policy if exists "tax_regions_public_read" on public.tax_regions;
+drop policy if exists "tax_regions_admin_write" on public.tax_regions;
+drop policy if exists "tax_rates_public_read" on public.tax_rates;
+drop policy if exists "tax_rates_admin_write" on public.tax_rates;
+drop policy if exists "tax_rate_product_categories_public_read" on public.tax_rate_product_categories;
+drop policy if exists "tax_rate_product_categories_admin_write" on public.tax_rate_product_categories;
+drop policy if exists "shipping_profiles_public_read" on public.shipping_profiles;
+drop policy if exists "shipping_profiles_admin_write" on public.shipping_profiles;
+drop policy if exists "fulfillment_providers_public_read" on public.fulfillment_providers;
+drop policy if exists "fulfillment_providers_admin_write" on public.fulfillment_providers;
+drop policy if exists "shipping_options_public_read" on public.shipping_options;
+drop policy if exists "shipping_options_admin_write" on public.shipping_options;
+drop policy if exists "shipping_option_requirements_public_read" on public.shipping_option_requirements;
+drop policy if exists "shipping_option_requirements_admin_write" on public.shipping_option_requirements;
+drop policy if exists "carts_select_own" on public.carts;
+drop policy if exists "carts_insert_own" on public.carts;
+drop policy if exists "carts_update_own" on public.carts;
+drop policy if exists "cart_line_items_select_own" on public.cart_line_items;
+drop policy if exists "cart_line_items_insert_own" on public.cart_line_items;
+drop policy if exists "cart_line_items_update_own" on public.cart_line_items;
+drop policy if exists "cart_line_items_delete_own" on public.cart_line_items;
+drop policy if exists "cart_shipping_methods_select_own" on public.cart_shipping_methods;
+drop policy if exists "cart_shipping_methods_insert_own" on public.cart_shipping_methods;
+drop policy if exists "cart_shipping_methods_delete_own" on public.cart_shipping_methods;
+drop policy if exists "orders_select_own" on public.orders;
+drop policy if exists "order_line_items_select_own" on public.order_line_items;
+drop policy if exists "order_fulfillments_select_own" on public.order_fulfillments;
+drop policy if exists "order_fulfillment_items_select_own" on public.order_fulfillment_items;
+drop policy if exists "order_returns_select_own" on public.order_returns;
+drop policy if exists "order_return_items_select_own" on public.order_return_items;
+drop policy if exists "order_refunds_select_own" on public.order_refunds;
+drop policy if exists "payment_collections_select_own" on public.payment_collections;
+drop policy if exists "payment_sessions_select_own" on public.payment_sessions;
+drop policy if exists "sales_channels_public_read" on public.sales_channels;
+drop policy if exists "sales_channels_admin_write" on public.sales_channels;
+drop policy if exists "sales_channel_products_public_read" on public.sales_channel_products;
+drop policy if exists "sales_channel_products_admin_write" on public.sales_channel_products;
+drop policy if exists "admin_users_select_self" on public.admin_users;
+drop policy if exists "admin_users_admin_write" on public.admin_users;
+drop policy if exists "admin_users_insert_via_invitation" on public.admin_users;
+drop policy if exists "admin_invitations_admin_only" on public.admin_invitations;
+drop policy if exists "admin_invitations_anon_token_lookup" on public.admin_invitations;
+drop policy if exists "admin_invitations_accept_own" on public.admin_invitations;
+
+
+-- =============================================================================
 -- Helper functions
 -- =============================================================================
 
@@ -62,13 +172,6 @@ $$;
 -- =============================================================================
 -- Trigger: auto-create customer profile on auth.users insert
 -- =============================================================================
--- When a user signs up (including signInAnonymously()), automatically
--- create a customers row linked to their auth.users record.
---
--- IMPORTANT: Admin invitees sign up via the accept-invite page but must NOT
--- get a customers row — they are staff, not shoppers. We detect this by
--- checking for a pending invitation matching their email and skipping the
--- customer insert in that case.
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -202,8 +305,6 @@ create policy "countries_admin_write"
 
 -- =============================================================================
 -- customers — own data only, admin can read/write all
--- Admins are NOT customers. Admin signups skip customer row creation (see
--- handle_new_user trigger above).
 -- =============================================================================
 
 create policy "customers_select_own"
@@ -219,12 +320,9 @@ create policy "customers_update_own"
   using (user_id = auth.uid() or public.is_admin())
   with check (user_id = auth.uid() or public.is_admin());
 
--- Soft delete only — no hard delete policy for customers.
--- Use the admin service role to hard-delete if needed.
-
 
 -- =============================================================================
--- customer_groups — public read (needed for price list resolution)
+-- customer_groups — public read
 -- =============================================================================
 
 create policy "customer_groups_public_read"
@@ -261,7 +359,6 @@ create policy "customer_addresses_delete_own"
 
 -- =============================================================================
 -- catalog — products, variants, categories, etc.
--- Public read for published products. Admin full write access.
 -- =============================================================================
 
 create policy "products_public_read"
@@ -273,15 +370,13 @@ create policy "products_admin_write"
   using (public.is_admin())
   with check (public.is_admin());
 
+-- Variants are readable by anyone (needed for cart operations).
+-- Draft product filtering is enforced at the products level.
 create policy "product_variants_public_read"
   on public.product_variants for select
   using (
-    exists (
-      select 1 from public.products p
-      where p.id = product_variants.product_id
-        and (p.status = 'published' or public.is_admin())
-        and p.deleted_at is null
-    )
+    deleted_at is null
+    or public.is_admin()
   );
 
 create policy "product_variants_admin_write"
@@ -381,9 +476,7 @@ create policy "product_images_admin_write"
 
 
 -- =============================================================================
--- inventory — authenticated read for availability checks, admin write
--- Customers need to check stock to know if an item is available.
--- We expose quantity_available only, not internal stocking details.
+-- inventory — authenticated read, admin write
 -- =============================================================================
 
 create policy "stock_locations_public_read"
@@ -413,8 +506,6 @@ create policy "inventory_levels_admin_write"
   using (public.is_admin())
   with check (public.is_admin());
 
--- Reservations are managed by edge functions (service role) only.
--- Customers should not be able to read or write reservations directly.
 create policy "inventory_reservations_admin_only"
   on public.inventory_reservations for all
   using (public.is_admin());
@@ -471,7 +562,7 @@ create policy "price_list_prices_admin_write"
 
 
 -- =============================================================================
--- promotions — authenticated read (needed to validate codes), admin write
+-- promotions — authenticated read, admin write
 -- =============================================================================
 
 create policy "promotions_authenticated_read"
@@ -498,8 +589,6 @@ create policy "promotion_rules_admin_write"
 create policy "promotion_usages_own_read"
   on public.promotion_usages for select
   using (customer_id = public.current_customer_id() or public.is_admin());
-
--- Usages are inserted by edge functions (service role) only.
 
 
 -- =============================================================================
@@ -535,7 +624,7 @@ create policy "tax_rate_product_categories_admin_write"
 
 
 -- =============================================================================
--- fulfillment — public read for shipping options, admin write
+-- fulfillment — public read, admin write
 -- =============================================================================
 
 create policy "shipping_profiles_public_read"
@@ -673,14 +762,11 @@ create policy "cart_shipping_methods_delete_own"
 -- =============================================================================
 -- orders — own data only, read-only for customers
 -- Orders are created by edge functions (service role).
--- Customers can only read their own orders — never write directly.
 -- =============================================================================
 
 create policy "orders_select_own"
   on public.orders for select
   using (customer_id = public.current_customer_id() or public.is_admin());
-
--- No customer insert/update/delete on orders — all writes via edge functions.
 
 create policy "order_line_items_select_own"
   on public.order_line_items for select
@@ -797,30 +883,17 @@ create policy "sales_channel_products_admin_write"
 -- =============================================================================
 -- admin_users — self select to avoid RLS recursion deadlock, admin write,
 --               invitation-based insert
---
--- IMPORTANT: is_admin() queries admin_users, so a blanket "admin only" policy
--- on admin_users would cause infinite recursion. The fix is:
---   1. Allow every authenticated user to SELECT their own row (breaks the cycle)
---   2. Allow confirmed admins to do everything else
---   3. Allow a newly invited user to INSERT their own row if a valid pending
---      invitation exists for their email (the accept-invite flow)
 -- =============================================================================
 
--- Every authenticated user can read their own admin_users row.
--- This is what allows is_admin() to resolve without recursing.
 create policy "admin_users_select_self"
   on public.admin_users for select
   using (user_id = auth.uid());
 
--- Confirmed admins can update, delete, and read all admin_users rows.
 create policy "admin_users_admin_write"
   on public.admin_users for all
   using (public.is_admin())
   with check (public.is_admin());
 
--- A newly signed-up user can insert their own admin_users row only if a valid
--- pending invitation exists for their email. This is the sole entry point for
--- non-admins to write to this table — used exclusively by the accept-invite page.
 create policy "admin_users_insert_via_invitation"
   on public.admin_users for insert
   to authenticated
@@ -837,23 +910,13 @@ create policy "admin_users_insert_via_invitation"
 
 -- =============================================================================
 -- admin_invitations — admin write, anonymous token lookup, self-accept
---
--- Three separate policies:
---   1. Admins can do everything (create, read, update, delete invitations)
---   2. Anonymous users can look up a pending non-expired invitation by token
---      (required for the accept-invite page before the user has an account)
---   3. A newly authenticated user can stamp accepted_at on their own invitation
---      (they are authenticated at this point but not yet an admin)
 -- =============================================================================
 
--- Admins can read, create, update and delete all invitations.
 create policy "admin_invitations_admin_only"
   on public.admin_invitations for all
   using (public.is_admin())
   with check (public.is_admin());
 
--- Anonymous users can look up a pending, non-expired invitation by token.
--- Required for the accept-invite page which runs before the user has an account.
 create policy "admin_invitations_anon_token_lookup"
   on public.admin_invitations for select
   to anon
@@ -862,9 +925,6 @@ create policy "admin_invitations_anon_token_lookup"
     and expires_at > now()
   );
 
--- A newly authenticated user (not yet an admin) can update their own invitation
--- to stamp accepted_at. This runs after signUp but before the admin_users row
--- is created, so is_admin() would return false — hence the separate policy.
 create policy "admin_invitations_accept_own"
   on public.admin_invitations for update
   to authenticated
