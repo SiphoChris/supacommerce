@@ -53,6 +53,7 @@ export class TaxClient {
       return { taxable: subtotal, rate: 0, taxTotal: 0, taxRegion: null }
     }
 
+    // Prefer province-specific match, fallback to country-level (province_code IS NULL)
     let matchedRegion = taxRegions.find(
       (r) =>
         (r as Record<string, unknown>)["province_code"] ===

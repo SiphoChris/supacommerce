@@ -54,7 +54,7 @@ export class PromotionsClient {
       .eq("code", code.toUpperCase())
       .eq("status", "active")
       .is("deleted_at", null)
-      .maybeSingle()
+      .single()
 
     if (error || !promo) {
       return { valid: false, promotion: null, discountAmount: 0, reason: "Code not found or inactive" }
@@ -63,6 +63,7 @@ export class PromotionsClient {
     const p = promo as Record<string, unknown>
     const now = new Date()
 
+    // Check date validity
     if (p["starts_at"] && new Date(p["starts_at"] as string) > now) {
       return { valid: false, promotion: null, discountAmount: 0, reason: "Promotion not yet active" }
     }
@@ -71,6 +72,7 @@ export class PromotionsClient {
       return { valid: false, promotion: null, discountAmount: 0, reason: "Promotion has expired" }
     }
 
+    // Check global usage limit
     if (
       p["usage_limit"] !== null &&
       (p["usage_count"] as number) >= (p["usage_limit"] as number)
@@ -78,6 +80,7 @@ export class PromotionsClient {
       return { valid: false, promotion: null, discountAmount: 0, reason: "Promotion usage limit reached" }
     }
 
+    // Check per-customer usage limit
     if (customerId && p["usage_limit_per_customer"] !== null) {
       const { count } = await this.supabase
         .from("promotion_usages")
@@ -95,6 +98,7 @@ export class PromotionsClient {
       }
     }
 
+    // Check rules
     const rules = (p["promotion_rules"] as PromotionRule[]) ?? []
 
     for (const rule of rules) {
@@ -109,8 +113,10 @@ export class PromotionsClient {
           }
         }
       }
+      // Add more rule types here as needed (product, category, customer_group)
     }
 
+    // Calculate discount amount
     const promotion = this.mapPromotion(promo)
     let discountAmount = 0
 
@@ -122,6 +128,7 @@ export class PromotionsClient {
         discountAmount = Math.min(promotion.value, cartSubtotal)
         break
       case "free_shipping":
+        // Shipping discount is calculated at checkout
         discountAmount = 0
         break
       case "buy_x_get_y":
@@ -135,6 +142,7 @@ export class PromotionsClient {
 
   /**
    * List all currently active automatic promotions.
+   * These are applied without a code when cart conditions are met.
    */
   async listAutomatic(): Promise<Promotion[]> {
     const now = new Date().toISOString()

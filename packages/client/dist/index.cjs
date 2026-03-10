@@ -38,12 +38,15 @@ var CartClient = class {
     const {
       data: { user }
     } = await this.supabase.auth.getUser();
-    if (!user)
-      throw new import_utils.ValidationError("User must be authenticated to access a cart");
-    const { data: customer } = await this.supabase.from("customers").select("id").eq("user_id", user.id).single();
-    if (!customer) throw new import_utils.NotFoundError("Customer profile");
+    if (!user) throw new import_utils.ValidationError("User must be authenticated to access a cart");
+    let { data: customer } = await this.supabase.from("customers").select("id").eq("user_id", user.id).maybeSingle();
+    if (!customer) {
+      const { data: created2, error: createError } = await this.supabase.from("customers").insert({ user_id: user.id, email: user.email ?? null, is_anonymous: false }).select("id").single();
+      if (createError || !created2) throw new import_utils.NotFoundError("Customer profile");
+      customer = created2;
+    }
     const customerId = customer.id;
-    const { data: existing } = await this.supabase.from("carts").select(`*, cart_line_items(*), cart_shipping_methods(*)`).eq("customer_id", customerId).eq("status", "active").order("created_at", { ascending: false }).limit(1).single();
+    const { data: existing } = await this.supabase.from("carts").select(`*, cart_line_items(*), cart_shipping_methods(*)`).eq("customer_id", customerId).eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (existing) return this.mapCart(existing);
     const { data: created, error } = await this.supabase.from("carts").insert({
       customer_id: customerId,
@@ -68,8 +71,7 @@ var CartClient = class {
    * If the variant is already in the cart, increments the quantity.
    */
   async addItem(cartId, input) {
-    if (input.quantity < 1)
-      throw new import_utils.ValidationError("Quantity must be at least 1");
+    if (input.quantity < 1) throw new import_utils.ValidationError("Quantity must be at least 1");
     const { data: existing } = await this.supabase.from("cart_line_items").select("id, quantity, unit_price").eq("cart_id", cartId).eq("variant_id", input.variantId).single();
     if (existing) {
       const e = existing;
@@ -115,8 +117,7 @@ var CartClient = class {
    * Update a line item's quantity. Set to 0 to remove the item.
    */
   async updateItem(cartId, lineItemId, input) {
-    if (input.quantity < 0)
-      throw new import_utils.ValidationError("Quantity cannot be negative");
+    if (input.quantity < 0) throw new import_utils.ValidationError("Quantity cannot be negative");
     if (input.quantity === 0) return this.removeItem(cartId, lineItemId);
     const { data: item } = await this.supabase.from("cart_line_items").select("unit_price").eq("id", lineItemId).eq("cart_id", cartId).single();
     if (!item) throw new import_utils.NotFoundError("Cart line item", lineItemId);
@@ -141,24 +142,16 @@ var CartClient = class {
    * Set the shipping address on the cart.
    */
   async setShippingAddress(cartId, address) {
-    const { error } = await this.supabase.from("carts").update({
-      shipping_address: address,
-      updated_at: (/* @__PURE__ */ new Date()).toISOString()
-    }).eq("id", cartId);
-    if (error)
-      throw new Error(`Failed to set shipping address: ${error.message}`);
+    const { error } = await this.supabase.from("carts").update({ shipping_address: address, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", cartId);
+    if (error) throw new Error(`Failed to set shipping address: ${error.message}`);
     return this.get(cartId);
   }
   /**
    * Set the billing address on the cart.
    */
   async setBillingAddress(cartId, address) {
-    const { error } = await this.supabase.from("carts").update({
-      billing_address: address,
-      updated_at: (/* @__PURE__ */ new Date()).toISOString()
-    }).eq("id", cartId);
-    if (error)
-      throw new Error(`Failed to set billing address: ${error.message}`);
+    const { error } = await this.supabase.from("carts").update({ billing_address: address, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", cartId);
+    if (error) throw new Error(`Failed to set billing address: ${error.message}`);
     return this.get(cartId);
   }
   /**
@@ -183,8 +176,7 @@ var CartClient = class {
       name: opt.name,
       price: opt.amount
     });
-    if (error)
-      throw new Error(`Failed to set shipping method: ${error.message}`);
+    if (error) throw new Error(`Failed to set shipping method: ${error.message}`);
     return this.get(cartId);
   }
   /**
@@ -222,24 +214,19 @@ var CartClient = class {
    * Initiate checkout. Calls the cart-checkout edge function.
    */
   async checkout(cartId, options) {
-    const { data, error } = await this.supabase.functions.invoke(
-      "cart-checkout",
-      {
-        body: {
-          cartId,
-          paymentProvider: options.paymentProvider,
-          billingAddress: options.billingAddress
-        }
+    const { data, error } = await this.supabase.functions.invoke("cart-checkout", {
+      body: {
+        cartId,
+        paymentProvider: options.paymentProvider,
+        billingAddress: options.billingAddress
       }
-    );
+    });
     if (error) throw new Error(`Checkout failed: ${error.message}`);
     return data;
   }
   // ─── Private helpers ────────────────────────────────────────────────────────
   mapCart(raw) {
-    const lineItems = (raw["cart_line_items"] ?? []).map(
-      this.mapLineItem
-    );
+    const lineItems = (raw["cart_line_items"] ?? []).map(this.mapLineItem);
     const shippingMethods = (raw["cart_shipping_methods"] ?? []).map(this.mapShippingMethod);
     const subtotal = lineItems.reduce((sum, item) => sum + item.subtotal, 0);
     const shippingTotal = shippingMethods.reduce((sum, m) => sum + m.price, 0);
@@ -310,14 +297,7 @@ var CatalogClient = class {
    * List products. Defaults to published only (respects RLS).
    */
   async listProducts(params = {}) {
-    const {
-      limit = 20,
-      offset = 0,
-      status,
-      categoryId,
-      collectionId,
-      search
-    } = params;
+    const { limit = 20, offset = 0, status, categoryId, collectionId, search } = params;
     let query = this.supabase.from("products").select(
       `
         *,
@@ -337,25 +317,19 @@ var CatalogClient = class {
     if (search) query = query.ilike("title", `%${search}%`);
     if (categoryId) {
       const { data: rows } = await this.supabase.from("product_category_products").select("product_id").eq("category_id", categoryId);
-      const ids = (rows ?? []).map(
-        (r) => r["product_id"]
-      );
+      const ids = (rows ?? []).map((r) => r["product_id"]);
       if (ids.length === 0) return (0, import_utils2.buildPaginatedResult)([], 0, params);
       query = query.in("id", ids);
     }
     if (collectionId) {
       const { data: rows } = await this.supabase.from("product_collection_products").select("product_id").eq("collection_id", collectionId);
-      const ids = (rows ?? []).map(
-        (r) => r["product_id"]
-      );
+      const ids = (rows ?? []).map((r) => r["product_id"]);
       if (ids.length === 0) return (0, import_utils2.buildPaginatedResult)([], 0, params);
       query = query.in("id", ids);
     }
     if (params.salesChannelId) {
       const { data: rows } = await this.supabase.from("sales_channel_products").select("product_id").eq("sales_channel_id", params.salesChannelId);
-      const ids = (rows ?? []).map(
-        (r) => r["product_id"]
-      );
+      const ids = (rows ?? []).map((r) => r["product_id"]);
       if (ids.length === 0) return (0, import_utils2.buildPaginatedResult)([], 0, params);
       query = query.in("id", ids);
     }
@@ -371,8 +345,7 @@ var CatalogClient = class {
    * Get a single product by ID.
    */
   async getProduct(productId) {
-    const { data, error } = await this.supabase.from("products").select(
-      `
+    const { data, error } = await this.supabase.from("products").select(`
         *,
         product_variants(
           *,
@@ -383,8 +356,7 @@ var CatalogClient = class {
         ),
         product_options(*, product_option_values(*)),
         product_images(*)
-      `
-    ).eq("id", productId).is("deleted_at", null).single();
+      `).eq("id", productId).is("deleted_at", null).maybeSingle();
     if (error || !data) throw new import_utils2.NotFoundError("Product", productId);
     return this.mapProduct(data);
   }
@@ -392,8 +364,7 @@ var CatalogClient = class {
    * Get a single product by handle (URL slug).
    */
   async getProductByHandle(handle) {
-    const { data, error } = await this.supabase.from("products").select(
-      `
+    const { data, error } = await this.supabase.from("products").select(`
         *,
         product_variants(
           *,
@@ -404,8 +375,7 @@ var CatalogClient = class {
         ),
         product_options(*, product_option_values(*)),
         product_images(*)
-      `
-    ).eq("handle", handle).is("deleted_at", null).single();
+      `).eq("handle", handle).is("deleted_at", null).maybeSingle();
     if (error || !data) throw new import_utils2.NotFoundError("Product");
     return this.mapProduct(data);
   }
@@ -413,15 +383,13 @@ var CatalogClient = class {
    * Get a single variant by ID.
    */
   async getVariant(variantId) {
-    const { data, error } = await this.supabase.from("product_variants").select(
-      `
+    const { data, error } = await this.supabase.from("product_variants").select(`
         *,
         product_variant_option_values(
           option_value_id,
           product_option_values(id, option_id, value, rank)
         )
-      `
-    ).eq("id", variantId).is("deleted_at", null).single();
+      `).eq("id", variantId).is("deleted_at", null).maybeSingle();
     if (error || !data) throw new import_utils2.NotFoundError("ProductVariant", variantId);
     return this.mapVariant(data);
   }
@@ -447,11 +415,7 @@ var CatalogClient = class {
     const { limit = 20, offset = 0 } = params;
     const { data, error, count } = await this.supabase.from("product_collections").select("*", { count: "exact" }).is("deleted_at", null).order("created_at", { ascending: false }).range(offset, offset + limit - 1);
     if (error) throw new Error(`Failed to list collections: ${error.message}`);
-    return (0, import_utils2.buildPaginatedResult)(
-      (data ?? []).map(this.mapCollection),
-      count ?? 0,
-      params
-    );
+    return (0, import_utils2.buildPaginatedResult)((data ?? []).map(this.mapCollection), count ?? 0, params);
   }
   // ─── Private mappers ────────────────────────────────────────────────────────
   mapProduct(raw) {
@@ -499,17 +463,15 @@ var CatalogClient = class {
           productId: opt["product_id"],
           title: opt["title"],
           rank: opt["rank"],
-          values: (opt["product_option_values"] ?? []).map(
-            (v) => {
-              const val = v;
-              return {
-                id: val["id"],
-                optionId: val["option_id"],
-                value: val["value"],
-                rank: val["rank"]
-              };
-            }
-          )
+          values: (opt["product_option_values"] ?? []).map((v) => {
+            const val = v;
+            return {
+              id: val["id"],
+              optionId: val["option_id"],
+              value: val["value"],
+              rank: val["rank"]
+            };
+          })
         };
       }),
       images: (r["product_images"] ?? []).map((i) => {
@@ -603,7 +565,7 @@ var OrdersClient = class {
         *,
         order_line_items(*),
         order_fulfillments(*)
-      `).eq("id", orderId).single();
+      `).eq("id", orderId).maybeSingle();
     if (error || !data) throw new import_utils3.NotFoundError("Order", orderId);
     return this.mapOrder(data);
   }
@@ -615,7 +577,7 @@ var OrdersClient = class {
         *,
         order_line_items(*),
         order_fulfillments(*)
-      `).eq("display_id", displayId).single();
+      `).eq("display_id", displayId).maybeSingle();
     if (error || !data) throw new import_utils3.NotFoundError("Order");
     return this.mapOrder(data);
   }
@@ -694,7 +656,7 @@ var CustomersClient = class {
       data: { user }
     } = await this.supabase.auth.getUser();
     if (!user) throw new import_utils4.ValidationError("Not authenticated");
-    const { data, error } = await this.supabase.from("customers").select("*").eq("user_id", user.id).single();
+    const { data, error } = await this.supabase.from("customers").select("*").eq("user_id", user.id).maybeSingle();
     if (error || !data) throw new import_utils4.NotFoundError("Customer profile");
     return this.mapCustomer(data);
   }
@@ -713,7 +675,7 @@ var CustomersClient = class {
       avatar_url: input.avatarUrl,
       metadata: input.metadata,
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
-    }).eq("user_id", user.id).select().single();
+    }).eq("user_id", user.id).select().maybeSingle();
     if (error || !data) throw new Error(`Failed to update profile: ${error?.message ?? "unknown"}`);
     return this.mapCustomer(data);
   }
@@ -747,7 +709,7 @@ var CustomersClient = class {
       country_code: input.countryCode,
       phone: input.phone ?? null,
       is_default: input.isDefault ?? false
-    }).select().single();
+    }).select().maybeSingle();
     if (error || !data) throw new Error(`Failed to add address: ${error?.message ?? "unknown"}`);
     return this.mapAddress(data);
   }
@@ -772,7 +734,7 @@ var CustomersClient = class {
       phone: input.phone,
       is_default: input.isDefault,
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
-    }).eq("id", addressId).eq("customer_id", customer.id).select().single();
+    }).eq("id", addressId).eq("customer_id", customer.id).select().maybeSingle();
     if (error || !data) throw new Error(`Failed to update address: ${error?.message ?? "unknown"}`);
     return this.mapAddress(data);
   }
@@ -832,7 +794,7 @@ var InventoryClient = class {
    * Get total available stock for a variant across all locations.
    */
   async getTotalAvailable(variantId) {
-    const { data: invItem } = await this.supabase.from("inventory_items").select("id, inventory_levels(quantity_available)").eq("variant_id", variantId).is("deleted_at", null).single();
+    const { data: invItem } = await this.supabase.from("inventory_items").select("id, inventory_levels(quantity_available)").eq("variant_id", variantId).is("deleted_at", null).maybeSingle();
     if (!invItem) return 0;
     const levels = invItem.inventory_levels ?? [];
     return levels.reduce((sum, l) => sum + l.quantity_available, 0);
@@ -850,7 +812,7 @@ var InventoryClient = class {
           quantity_available,
           stock_locations(id, name)
         )
-      `).eq("variant_id", variantId).is("deleted_at", null).single();
+      `).eq("variant_id", variantId).is("deleted_at", null).maybeSingle();
     if (!invItem) {
       return {
         variantId,
@@ -879,7 +841,6 @@ var InventoryClient = class {
   }
   /**
    * Check availability for multiple variants at once.
-   * More efficient than calling getAvailability in a loop.
    */
   async getBulkAvailability(variantIds) {
     const { data } = await this.supabase.from("inventory_items").select("variant_id, inventory_levels(quantity_available)").in("variant_id", variantIds).is("deleted_at", null);
@@ -913,13 +874,18 @@ var PricingClient = class {
    */
   async getVariantPrice(params) {
     const { variantId, regionId, currencyCode, quantity = 1 } = params;
-    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const now = /* @__PURE__ */ new Date();
     const { data: priceListPrices } = await this.supabase.from("price_list_prices").select(`
         amount, currency_code, region_id, min_quantity, max_quantity, price_list_id,
-        price_lists!inner(id, type, status, starts_at, ends_at)
-      `).eq("variant_id", variantId).eq("price_lists.status", "active").or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gte.${now}`);
+        price_lists(id, type, status, starts_at, ends_at)
+      `).eq("variant_id", variantId);
     const validListPrices = (priceListPrices ?? []).filter((p) => {
       const pp = p;
+      const pl = pp["price_lists"];
+      if (!pl) return false;
+      if (pl["status"] !== "active") return false;
+      if (pl["starts_at"] && new Date(pl["starts_at"]) > now) return false;
+      if (pl["ends_at"] && new Date(pl["ends_at"]) < now) return false;
       if (regionId && pp["region_id"] && pp["region_id"] !== regionId) return false;
       if (currencyCode && pp["currency_code"] !== currencyCode) return false;
       if (pp["min_quantity"] !== null && pp["min_quantity"] > quantity) return false;
@@ -946,7 +912,7 @@ var PricingClient = class {
     const { data: priceSet } = await this.supabase.from("price_sets").select(`
         id,
         prices(amount, currency_code, region_id, min_quantity, max_quantity)
-      `).eq("variant_id", variantId).single();
+      `).eq("variant_id", variantId).maybeSingle();
     if (!priceSet) return null;
     const ps = priceSet;
     const candidates = ps.prices.filter((p) => {
@@ -1031,7 +997,7 @@ var PromotionsClient = class {
    */
   async validate(params) {
     const { code, cartSubtotal, customerId } = params;
-    const { data: promo, error } = await this.supabase.from("promotions").select("*, promotion_rules(*)").eq("code", code.toUpperCase()).eq("status", "active").is("deleted_at", null).single();
+    const { data: promo, error } = await this.supabase.from("promotions").select("*, promotion_rules(*)").eq("code", code.toUpperCase()).eq("status", "active").is("deleted_at", null).maybeSingle();
     if (error || !promo) {
       return { valid: false, promotion: null, discountAmount: 0, reason: "Code not found or inactive" };
     }
@@ -1091,7 +1057,6 @@ var PromotionsClient = class {
   }
   /**
    * List all currently active automatic promotions.
-   * These are applied without a code when cart conditions are met.
    */
   async listAutomatic() {
     const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -1139,13 +1104,13 @@ var RegionsClient = class {
     return (data ?? []).map(this.mapRegion);
   }
   async get(regionId) {
-    const { data, error } = await this.supabase.from("regions").select("*, countries(*)").eq("id", regionId).single();
+    const { data, error } = await this.supabase.from("regions").select("*, countries(*)").eq("id", regionId).maybeSingle();
     if (error || !data) throw new import_utils5.NotFoundError("Region", regionId);
     return this.mapRegion(data);
   }
   /** Find the region that includes a given ISO 2 country code. */
   async getByCountry(countryCode) {
-    const { data: country } = await this.supabase.from("countries").select("region_id").eq("iso2", countryCode.toUpperCase()).single();
+    const { data: country } = await this.supabase.from("countries").select("region_id").eq("iso2", countryCode.toUpperCase()).maybeSingle();
     if (!country) return null;
     const regionId = country.region_id;
     return this.get(regionId);
@@ -1189,17 +1154,14 @@ var FulfillmentClient = class {
     let query = this.supabase.from("shipping_options").select("*, shipping_option_requirements(*)").eq("is_active", true).eq("is_return", false).is("deleted_at", null);
     if (regionId) query = query.eq("region_id", regionId);
     const { data, error } = await query;
-    if (error)
-      throw new Error(`Failed to list shipping options: ${error.message}`);
+    if (error) throw new Error(`Failed to list shipping options: ${error.message}`);
     let options = data ?? [];
     if (cartSubtotal !== void 0) {
       options = options.filter((opt) => {
         const reqs = opt.shipping_option_requirements ?? [];
         for (const req of reqs) {
-          if (req.type === "min_subtotal" && cartSubtotal < req.amount)
-            return false;
-          if (req.type === "max_subtotal" && cartSubtotal > req.amount)
-            return false;
+          if (req.type === "min_subtotal" && cartSubtotal < req.amount) return false;
+          if (req.type === "max_subtotal" && cartSubtotal > req.amount) return false;
         }
         return true;
       });
@@ -1210,7 +1172,7 @@ var FulfillmentClient = class {
    * Get a single shipping option by ID including its requirements.
    */
   async getShippingOption(optionId) {
-    const { data, error } = await this.supabase.from("shipping_options").select("*, shipping_option_requirements(*)").eq("id", optionId).single();
+    const { data, error } = await this.supabase.from("shipping_options").select("*, shipping_option_requirements(*)").eq("id", optionId).maybeSingle();
     if (error || !data) throw new import_utils6.NotFoundError("ShippingOption", optionId);
     return this.mapOption(data);
   }
@@ -1332,11 +1294,11 @@ var SalesChannelsClient = class {
   }
   /** Get the default sales channel. */
   async getDefault() {
-    const { data } = await this.supabase.from("sales_channels").select("*").eq("is_default", true).eq("is_disabled", false).is("deleted_at", null).single();
+    const { data } = await this.supabase.from("sales_channels").select("*").eq("is_default", true).eq("is_disabled", false).is("deleted_at", null).maybeSingle();
     return data ? this.mapChannel(data) : null;
   }
   async get(channelId) {
-    const { data, error } = await this.supabase.from("sales_channels").select("*").eq("id", channelId).is("deleted_at", null).single();
+    const { data, error } = await this.supabase.from("sales_channels").select("*").eq("id", channelId).is("deleted_at", null).maybeSingle();
     if (error || !data) throw new import_utils7.NotFoundError("SalesChannel", channelId);
     return this.mapChannel(data);
   }

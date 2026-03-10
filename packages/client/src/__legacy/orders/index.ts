@@ -103,7 +103,7 @@ export class OrdersClient {
         order_fulfillments(*)
       `)
       .eq("id", orderId)
-      .maybeSingle()
+      .single()
 
     if (error || !data) throw new NotFoundError("Order", orderId)
 
@@ -122,7 +122,7 @@ export class OrdersClient {
         order_fulfillments(*)
       `)
       .eq("display_id", displayId)
-      .maybeSingle()
+      .single()
 
     if (error || !data) throw new NotFoundError("Order")
 

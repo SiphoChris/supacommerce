@@ -36,26 +36,21 @@ export class PricingClient {
     const { variantId, regionId, currencyCode, quantity = 1 } = params
 
     // ── 1. Check for active price list prices ──────────────────────────────
-    // Fetch with joined price list data and filter client-side.
-    // PostgREST does not support .or() on joined columns or .eq() on
-    // relationship columns, so we pull all rows and filter in JS.
-    const now = new Date()
+    const now = new Date().toISOString()
 
     const { data: priceListPrices } = await this.supabase
       .from("price_list_prices")
       .select(`
         amount, currency_code, region_id, min_quantity, max_quantity, price_list_id,
-        price_lists(id, type, status, starts_at, ends_at)
+        price_lists!inner(id, type, status, starts_at, ends_at)
       `)
       .eq("variant_id", variantId)
+      .eq("price_lists.status", "active")
+      .or(`starts_at.is.null,starts_at.lte.${now}`)
+      .or(`ends_at.is.null,ends_at.gte.${now}`)
 
     const validListPrices = (priceListPrices ?? []).filter((p) => {
       const pp = p as Record<string, unknown>
-      const pl = pp["price_lists"] as Record<string, unknown> | null
-      if (!pl) return false
-      if (pl["status"] !== "active") return false
-      if (pl["starts_at"] && new Date(pl["starts_at"] as string) > now) return false
-      if (pl["ends_at"] && new Date(pl["ends_at"] as string) < now) return false
       if (regionId && pp["region_id"] && pp["region_id"] !== regionId) return false
       if (currencyCode && pp["currency_code"] !== currencyCode) return false
       if (pp["min_quantity"] !== null && (pp["min_quantity"] as number) > quantity) return false
@@ -64,6 +59,7 @@ export class PricingClient {
     })
 
     if (validListPrices.length > 0) {
+      // Pick lowest amount (best deal for customer)
       const best = validListPrices.reduce((min, p) => {
         const pRec = p as Record<string, unknown>
         const minRec = min as Record<string, unknown>
@@ -90,7 +86,7 @@ export class PricingClient {
         prices(amount, currency_code, region_id, min_quantity, max_quantity)
       `)
       .eq("variant_id", variantId)
-      .maybeSingle()
+      .single()
 
     if (!priceSet) return null
 
@@ -105,12 +101,14 @@ export class PricingClient {
       }>
     }
 
+    // Filter to matching prices and pick the most specific one
     const candidates = ps.prices.filter((p) => {
       if (p.min_quantity !== null && p.min_quantity > quantity) return false
       if (p.max_quantity !== null && p.max_quantity < quantity) return false
       return true
     })
 
+    // Prefer region + currency match > region match > currency match
     const regionAndCurrency = candidates.find(
       (p) => p.region_id === regionId && p.currency_code === currencyCode
     )
@@ -152,6 +150,7 @@ export class PricingClient {
       }
     }
 
+    // Fallback: first available price
     const fallback = candidates[0]
     if (!fallback) return null
 

@@ -1,27 +1,27 @@
-import type { AnySupabaseClient } from "../types.js"
-import { NotFoundError } from "@supacommerce/utils"
+import type { AnySupabaseClient } from "../types.js";
+import { NotFoundError } from "@supacommerce/utils";
 
 export interface Country {
-  id: string
-  iso2: string
-  iso3: string | null
-  name: string
-  displayName: string | null
+  id: string;
+  iso2: string;
+  iso3: string | null;
+  name: string;
+  displayName: string | null;
 }
 
 export interface Region {
-  id: string
-  name: string
-  currencyCode: string
+  id: string;
+  name: string;
+  currencyCode: string;
   /**
    * Legacy display-only string — e.g. "0.20" or "20".
    * NOT used for tax calculation. Use TaxClient.calculate() instead,
    * which reads from tax_regions / tax_rates and returns a numeric rate.
    */
-  taxRate: string
-  taxIncluded: boolean
-  isActive: boolean
-  countries: Country[]
+  taxRate: string;
+  taxIncluded: boolean;
+  isActive: boolean;
+  countries: Country[];
 }
 
 export class RegionsClient {
@@ -33,10 +33,10 @@ export class RegionsClient {
       .select("*, countries(*)")
       .eq("is_active", true)
       .is("deleted_at", null)
-      .order("name")
+      .order("name");
 
-    if (error) throw new Error(`Failed to list regions: ${error.message}`)
-    return (data ?? []).map(this.mapRegion)
+    if (error) throw new Error(`Failed to list regions: ${error.message}`);
+    return (data ?? []).map(this.mapRegion);
   }
 
   async get(regionId: string): Promise<Region> {
@@ -44,10 +44,10 @@ export class RegionsClient {
       .from("regions")
       .select("*, countries(*)")
       .eq("id", regionId)
-      .maybeSingle()
+      .single();
 
-    if (error || !data) throw new NotFoundError("Region", regionId)
-    return this.mapRegion(data)
+    if (error || !data) throw new NotFoundError("Region", regionId);
+    return this.mapRegion(data);
   }
 
   /** Find the region that includes a given ISO 2 country code. */
@@ -56,16 +56,16 @@ export class RegionsClient {
       .from("countries")
       .select("region_id")
       .eq("iso2", countryCode.toUpperCase())
-      .maybeSingle()
+      .single();
 
-    if (!country) return null
+    if (!country) return null;
 
-    const regionId = (country as { region_id: string }).region_id
-    return this.get(regionId)
+    const regionId = (country as { region_id: string }).region_id;
+    return this.get(regionId);
   }
 
   private mapRegion(raw: unknown): Region {
-    const r = raw as Record<string, unknown>
+    const r = raw as Record<string, unknown>;
     return {
       id: r["id"] as string,
       name: r["name"] as string,
@@ -74,15 +74,15 @@ export class RegionsClient {
       taxIncluded: r["tax_included"] as boolean,
       isActive: r["is_active"] as boolean,
       countries: ((r["countries"] as unknown[]) ?? []).map((c) => {
-        const co = c as Record<string, unknown>
+        const co = c as Record<string, unknown>;
         return {
           id: co["id"] as string,
           iso2: co["iso2"] as string,
           iso3: co["iso3"] as string | null,
           name: co["name"] as string,
           displayName: co["display_name"] as string | null,
-        } satisfies Country
+        } satisfies Country;
       }),
-    }
+    };
   }
 }

@@ -1,8 +1,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
+// ─── Supabase Client ──────────────────────────────────────────────────────────
+
+/**
+ * Accept any Supabase client — untyped or fully typed with generated types.
+ * TypeScript inference handles the rest once the developer runs
+ * `supabase gen types typescript`.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnySupabaseClient = SupabaseClient<any, any, any>
 
+// ─── Address ──────────────────────────────────────────────────────────────────
+
+/**
+ * Address snapshot. Used on carts, orders, and fulfillments.
+ * Stored as JSONB so historical records remain accurate if the customer
+ * later edits or deletes the address on their account.
+ */
 export interface Address {
   firstName?: string
   lastName?: string
@@ -16,10 +30,18 @@ export interface Address {
   phone?: string
 }
 
+// ─── Money ────────────────────────────────────────────────────────────────────
+
+/**
+ * Monetary amount with currency. The amount is always an integer in the
+ * smallest currency unit (cents for USD, pence for GBP, etc.).
+ */
 export interface Money {
   amount: number
   currencyCode: string
 }
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
 
 export type ProductStatus = "draft" | "published" | "archived"
 

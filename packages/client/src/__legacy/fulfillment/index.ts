@@ -1,28 +1,28 @@
-import type { AnySupabaseClient } from "../types.js"
-import { NotFoundError } from "@supacommerce/utils"
+import type { AnySupabaseClient } from "../types.js";
+import { NotFoundError } from "@supacommerce/utils";
 
 export interface ShippingOptionRequirement {
-  id: string
-  type: string   // "min_subtotal" | "max_subtotal"
-  amount: number
+  id: string;
+  type: string; // "min_subtotal" | "max_subtotal"
+  amount: number;
 }
 
 export interface ShippingOption {
-  id: string
-  name: string
-  regionId: string
-  providerId: string | null
-  type: string
-  amount: number
-  isActive: boolean
-  data: Record<string, unknown> | null
+  id: string;
+  name: string;
+  regionId: string;
+  providerId: string | null;
+  type: string;
+  amount: number;
+  isActive: boolean;
+  data: Record<string, unknown> | null;
   /** Requirements for this option to be available at checkout. */
-  requirements: ShippingOptionRequirement[]
+  requirements: ShippingOptionRequirement[];
 }
 
 export interface ListShippingOptionsParams {
-  regionId?: string
-  cartSubtotal?: number
+  regionId?: string;
+  cartSubtotal?: number;
 }
 
 export class FulfillmentClient {
@@ -33,42 +33,51 @@ export class FulfillmentClient {
    * Optionally filters by cart subtotal to exclude options with unmet requirements.
    * Requirements are always included in the returned objects.
    */
-  async listShippingOptions(params: ListShippingOptionsParams = {}): Promise<ShippingOption[]> {
-    const { regionId, cartSubtotal } = params
+  async listShippingOptions(
+    params: ListShippingOptionsParams = {},
+  ): Promise<ShippingOption[]> {
+    const { regionId, cartSubtotal } = params;
 
     let query = this.supabase
       .from("shipping_options")
       .select("*, shipping_option_requirements(*)")
       .eq("is_active", true)
       .eq("is_return", false)
-      .is("deleted_at", null)
+      .is("deleted_at", null);
 
-    if (regionId) query = query.eq("region_id", regionId)
+    if (regionId) query = query.eq("region_id", regionId);
 
-    const { data, error } = await query
+    const { data, error } = await query;
 
-    if (error) throw new Error(`Failed to list shipping options: ${error.message}`)
+    if (error)
+      throw new Error(`Failed to list shipping options: ${error.message}`);
 
-    let options = data ?? []
+    let options = data ?? [];
 
     // Filter by cart subtotal requirements if provided
     if (cartSubtotal !== undefined) {
       options = options.filter((opt) => {
-        const reqs = (
-          opt as unknown as {
-            shipping_option_requirements: Array<{ type: string; amount: number }>
-          }
-        ).shipping_option_requirements ?? []
+        const reqs =
+          (
+            opt as unknown as {
+              shipping_option_requirements: Array<{
+                type: string;
+                amount: number;
+              }>;
+            }
+          ).shipping_option_requirements ?? [];
 
         for (const req of reqs) {
-          if (req.type === "min_subtotal" && cartSubtotal < req.amount) return false
-          if (req.type === "max_subtotal" && cartSubtotal > req.amount) return false
+          if (req.type === "min_subtotal" && cartSubtotal < req.amount)
+            return false;
+          if (req.type === "max_subtotal" && cartSubtotal > req.amount)
+            return false;
         }
-        return true
-      })
+        return true;
+      });
     }
 
-    return options.map(this.mapOption)
+    return options.map(this.mapOption);
   }
 
   /**
@@ -79,24 +88,24 @@ export class FulfillmentClient {
       .from("shipping_options")
       .select("*, shipping_option_requirements(*)")
       .eq("id", optionId)
-      .maybeSingle()
+      .single();
 
-    if (error || !data) throw new NotFoundError("ShippingOption", optionId)
-    return this.mapOption(data)
+    if (error || !data) throw new NotFoundError("ShippingOption", optionId);
+    return this.mapOption(data);
   }
 
   private mapOption(raw: unknown): ShippingOption {
-    const r = raw as Record<string, unknown>
+    const r = raw as Record<string, unknown>;
     const requirements = (
       (r["shipping_option_requirements"] as unknown[]) ?? []
     ).map((req) => {
-      const rq = req as Record<string, unknown>
+      const rq = req as Record<string, unknown>;
       return {
         id: rq["id"] as string,
         type: rq["type"] as string,
         amount: rq["amount"] as number,
-      } satisfies ShippingOptionRequirement
-    })
+      } satisfies ShippingOptionRequirement;
+    });
 
     return {
       id: r["id"] as string,
@@ -108,6 +117,6 @@ export class FulfillmentClient {
       isActive: r["is_active"] as boolean,
       data: r["data"] as Record<string, unknown> | null,
       requirements,
-    }
+    };
   }
 }

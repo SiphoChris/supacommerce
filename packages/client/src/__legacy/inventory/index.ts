@@ -1,5 +1,6 @@
 import type { AnySupabaseClient } from "../types.js"
 
+
 export interface InventoryLevel {
   locationId: string
   locationName: string
@@ -28,7 +29,7 @@ export class InventoryClient {
       .select("id, inventory_levels(quantity_available)")
       .eq("variant_id", variantId)
       .is("deleted_at", null)
-      .maybeSingle()
+      .single()
 
     if (!invItem) return 0
 
@@ -57,7 +58,7 @@ export class InventoryClient {
       `)
       .eq("variant_id", variantId)
       .is("deleted_at", null)
-      .maybeSingle()
+      .single()
 
     if (!invItem) {
       return {
@@ -101,6 +102,7 @@ export class InventoryClient {
 
   /**
    * Check availability for multiple variants at once.
+   * More efficient than calling getAvailability in a loop.
    */
   async getBulkAvailability(variantIds: string[]): Promise<Map<string, number>> {
     const { data } = await this.supabase
@@ -111,6 +113,7 @@ export class InventoryClient {
 
     const result = new Map<string, number>()
 
+    // Initialise all to 0
     for (const id of variantIds) result.set(id, 0)
 
     for (const item of data ?? []) {

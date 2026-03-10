@@ -37,7 +37,7 @@ export class SalesChannelsClient {
       .eq("is_default", true)
       .eq("is_disabled", false)
       .is("deleted_at", null)
-      .maybeSingle()
+      .single()
 
     return data ? this.mapChannel(data) : null
   }
@@ -48,7 +48,7 @@ export class SalesChannelsClient {
       .select("*")
       .eq("id", channelId)
       .is("deleted_at", null)
-      .maybeSingle()
+      .single()
 
     if (error || !data) throw new NotFoundError("SalesChannel", channelId)
 

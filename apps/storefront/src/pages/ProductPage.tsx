@@ -52,8 +52,15 @@ export default function ProductPage() {
   // Resolve variant from selected options
   useEffect(() => {
     if (!product) return;
+    // Products with no options — just pick the first variant
+    if (product.options.length === 0) {
+      setSelectedVariant(product.variants[0] ?? null);
+      setAdded(false);
+      return;
+    }
     const variant =
       product.variants.find((v) => {
+        // A variant matches if every one of its option values is selected
         return v.optionValues.every(
           (ov) => selectedOptions[ov.optionId] === ov.id,
         );
@@ -79,10 +86,11 @@ export default function ProductPage() {
   };
 
   const handleAddToCart = async () => {
-    if (!selectedVariant || !user) {
-      if (!user) navigate("/login");
+    if (!user) {
+      navigate("/login");
       return;
     }
+    if (!selectedVariant) return;
     setAdding(true);
     try {
       await addItem(selectedVariant.id, quantity);
@@ -315,25 +323,29 @@ export default function ProductPage() {
           {/* Add to cart */}
           <button
             onClick={handleAddToCart}
-            disabled={adding || !selectedVariant}
+            disabled={adding || (!selectedVariant && !!user)}
             className="w-full py-4 text-white text-sm font-medium tracking-widest uppercase transition-all duration-200"
             style={{
               background: added
                 ? "#4a7c59"
-                : !selectedVariant
-                  ? "var(--color-ink-faint)"
-                  : "var(--color-ink)",
+                : !user
+                  ? "var(--color-accent)"
+                  : !selectedVariant
+                    ? "var(--color-ink-faint)"
+                    : "var(--color-ink)",
               letterSpacing: "0.12em",
-              cursor: !selectedVariant ? "not-allowed" : "pointer",
+              cursor: !selectedVariant && !!user ? "not-allowed" : "pointer",
             }}
           >
             {adding
               ? "Adding…"
               : added
                 ? "Added to bag ✓"
-                : !selectedVariant
-                  ? "Select options"
-                  : "Add to bag"}
+                : !user
+                  ? "Sign in to add"
+                  : !selectedVariant
+                    ? "Select options"
+                    : "Add to bag"}
           </button>
 
           {!user && (

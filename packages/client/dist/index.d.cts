@@ -1,17 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { PaginationParams, PaginatedResult } from '@supacommerce/utils';
 
-/**
- * Accept any Supabase client — untyped or fully typed with generated types.
- * TypeScript inference handles the rest once the developer runs
- * `supabase gen types typescript`.
- */
 type AnySupabaseClient = SupabaseClient<any, any, any>;
-/**
- * Address snapshot. Used on carts, orders, and fulfillments.
- * Stored as JSONB so historical records remain accurate if the customer
- * later edits or deletes the address on their account.
- */
 interface Address {
     firstName?: string;
     lastName?: string;
@@ -24,10 +14,6 @@ interface Address {
     countryCode: string;
     phone?: string;
 }
-/**
- * Monetary amount with currency. The amount is always an integer in the
- * smallest currency unit (cents for USD, pence for GBP, etc.).
- */
 interface Money {
     amount: number;
     currencyCode: string;
@@ -479,7 +465,6 @@ declare class InventoryClient {
     getAvailability(variantId: string): Promise<InventoryAvailability>;
     /**
      * Check availability for multiple variants at once.
-     * More efficient than calling getAvailability in a loop.
      */
     getBulkAvailability(variantIds: string[]): Promise<Map<string, number>>;
 }
@@ -566,7 +551,6 @@ declare class PromotionsClient {
     validate(params: ValidatePromotionParams): Promise<ValidationResult>;
     /**
      * List all currently active automatic promotions.
-     * These are applied without a code when cart conditions are met.
      */
     listAutomatic(): Promise<Promotion[]>;
     private mapPromotion;
@@ -769,7 +753,7 @@ interface CommerceClient {
  *
  * @example
  * import { createClient as createSupabaseClient } from "@supabase/supabase-js"
- * import { createClient } from "@supacommerce/client"
+ * import { createClient } from "@supacommerce/core"
  *
  * const supabase = createSupabaseClient(url, anonKey)
  * const commerce = createClient(supabase)

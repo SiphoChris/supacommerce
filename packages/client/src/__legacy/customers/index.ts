@@ -72,7 +72,7 @@ export class CustomersClient {
       .from("customers")
       .select("*")
       .eq("user_id", user.id)
-      .maybeSingle()
+      .single()
 
     if (error || !data) throw new NotFoundError("Customer profile")
 
@@ -101,7 +101,7 @@ export class CustomersClient {
       })
       .eq("user_id", user.id)
       .select()
-      .maybeSingle()
+      .single()
 
     if (error || !data) throw new Error(`Failed to update profile: ${error?.message ?? "unknown"}`)
 
@@ -132,6 +132,7 @@ export class CustomersClient {
   async addAddress(input: AddAddressInput): Promise<CustomerAddress> {
     const customer = await this.me()
 
+    // If this is the default address, unset any existing default
     if (input.isDefault) {
       await this.supabase
         .from("customer_addresses")
@@ -157,7 +158,7 @@ export class CustomersClient {
         is_default: input.isDefault ?? false,
       })
       .select()
-      .maybeSingle()
+      .single()
 
     if (error || !data) throw new Error(`Failed to add address: ${error?.message ?? "unknown"}`)
 
@@ -197,7 +198,7 @@ export class CustomersClient {
       .eq("id", addressId)
       .eq("customer_id", customer.id)
       .select()
-      .maybeSingle()
+      .single()
 
     if (error || !data) throw new Error(`Failed to update address: ${error?.message ?? "unknown"}`)
 
