@@ -10,11 +10,11 @@ The closest analogy is [shadcn/ui](https://ui.shadcn.com) — but for your backe
 
 A pnpm monorepo containing three packages:
 
-| Package | Description |
-|---|---|
-| `@supacommerce/cli` | The `init` command — copies schemas, edge functions, and SQL files into your project |
-| `@supacommerce/core` | Typed ecommerce query client — `commerce.cart.addItem()`, `commerce.catalog.listProducts()`, etc. |
-| `@supacommerce/utils` | Shared utilities — currency helpers, error types, `Result<T>`, pagination |
+| Package                | Description                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------- |
+| `@supacommerce/cli`    | The `init` command — copies schemas, edge functions, and SQL files into your project              |
+| `@supacommerce/client` | Typed ecommerce query client — `commerce.cart.addItem()`, `commerce.catalog.listProducts()`, etc. |
+| `@supacommerce/utils`  | Shared utilities — currency helpers, error types, `Result<T>`, pagination                         |
 
 ---
 
@@ -70,22 +70,22 @@ The RLS policies are sensible defaults — public read on products, own-data-onl
 ### 4. You use the query client
 
 ```typescript
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
-import { createClient } from "@supacommerce/core"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supacommerce/client";
 
-const supabase = createSupabaseClient(url, anonKey)
-const commerce = createClient(supabase)
+const supabase = createSupabaseClient(url, anonKey);
+const commerce = createClient(supabase);
 
 // Storefront
-const products = await commerce.catalog.listProducts()
-const cart = await commerce.cart.getOrCreate()
-await commerce.cart.addItem(cart.id, { variantId, quantity: 1 })
-const orders = await commerce.orders.list()
+const products = await commerce.catalog.listProducts();
+const cart = await commerce.cart.getOrCreate();
+await commerce.cart.addItem(cart.id, { variantId, quantity: 1 });
+const orders = await commerce.orders.list();
 
 // Admin (pass service role client)
-const supabaseAdmin = createSupabaseClient(url, serviceRoleKey)
-const adminCommerce = createClient(supabaseAdmin)
-const admins = await adminCommerce.admin.list()
+const supabaseAdmin = createSupabaseClient(url, serviceRoleKey);
+const adminCommerce = createClient(supabaseAdmin);
+const admins = await adminCommerce.admin.list();
 ```
 
 ---
@@ -96,7 +96,7 @@ Carts are tied to a Supabase auth user. For unauthenticated customers, use Supab
 
 ```typescript
 // Creates a real auth user with no email — cart persists across sessions
-const { data } = await supabase.auth.signInAnonymously()
+const { data } = await supabase.auth.signInAnonymously();
 
 // When the user signs up for a full account later, Supabase upgrades
 // the anonymous user and the cart is preserved.
@@ -108,22 +108,22 @@ RLS works identically for anonymous and authenticated users — no special handl
 
 ## Schema coverage
 
-| Domain | Tables |
-|---|---|
-| Currencies | `currencies` |
-| Regions | `regions`, `countries` |
-| Customers | `customers`, `customer_groups`, `customer_addresses` |
-| Catalog | `products`, `product_variants`, `product_options`, `product_option_values`, `product_variant_option_values`, `product_categories`, `product_collections`, `product_tags`, `product_images` |
-| Inventory | `stock_locations`, `inventory_items`, `inventory_levels`, `inventory_reservations` |
-| Pricing | `price_sets`, `prices`, `price_lists`, `price_list_prices`, `price_list_customer_groups` |
-| Promotions | `promotions`, `promotion_rules`, `promotion_usages` |
-| Tax | `tax_regions`, `tax_rates`, `tax_rate_product_categories` |
-| Fulfillment | `shipping_profiles`, `fulfillment_providers`, `shipping_options`, `shipping_option_requirements` |
-| Cart | `carts`, `cart_line_items`, `cart_shipping_methods` |
-| Orders | `orders`, `order_line_items`, `order_fulfillments`, `order_fulfillment_items`, `order_returns`, `order_return_items`, `order_refunds` |
-| Payments | `payment_collections`, `payment_sessions` |
-| Sales Channels | `sales_channels`, `sales_channel_products` |
-| Admin | `admin_users`, `admin_invitations` |
+| Domain         | Tables                                                                                                                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Currencies     | `currencies`                                                                                                                                                                               |
+| Regions        | `regions`, `countries`                                                                                                                                                                     |
+| Customers      | `customers`, `customer_groups`, `customer_addresses`                                                                                                                                       |
+| Catalog        | `products`, `product_variants`, `product_options`, `product_option_values`, `product_variant_option_values`, `product_categories`, `product_collections`, `product_tags`, `product_images` |
+| Inventory      | `stock_locations`, `inventory_items`, `inventory_levels`, `inventory_reservations`                                                                                                         |
+| Pricing        | `price_sets`, `prices`, `price_lists`, `price_list_prices`, `price_list_customer_groups`                                                                                                   |
+| Promotions     | `promotions`, `promotion_rules`, `promotion_usages`                                                                                                                                        |
+| Tax            | `tax_regions`, `tax_rates`, `tax_rate_product_categories`                                                                                                                                  |
+| Fulfillment    | `shipping_profiles`, `fulfillment_providers`, `shipping_options`, `shipping_option_requirements`                                                                                           |
+| Cart           | `carts`, `cart_line_items`, `cart_shipping_methods`                                                                                                                                        |
+| Orders         | `orders`, `order_line_items`, `order_fulfillments`, `order_fulfillment_items`, `order_returns`, `order_return_items`, `order_refunds`                                                      |
+| Payments       | `payment_collections`, `payment_sessions`                                                                                                                                                  |
+| Sales Channels | `sales_channels`, `sales_channel_products`                                                                                                                                                 |
+| Admin          | `admin_users`, `admin_invitations`                                                                                                                                                         |
 
 ---
 
@@ -131,12 +131,12 @@ RLS works identically for anonymous and authenticated users — no special handl
 
 Four Supabase edge functions are included as building blocks with clear TODO markers:
 
-| Function | What it does |
-|---|---|
-| `cart-checkout` | Validates inventory, creates order atomically via RPC, returns payment session data |
-| `order-confirmed` | Marks order as processing, reserves inventory — called by `payment-webhook` |
-| `payment-webhook` | Receives provider webhook events, verifies signature, calls `order-confirmed` |
-| `inventory-reserve` | Creates soft inventory holds before payment capture |
+| Function            | What it does                                                                        |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| `cart-checkout`     | Validates inventory, creates order atomically via RPC, returns payment session data |
+| `order-confirmed`   | Marks order as processing, reserves inventory — called by `payment-webhook`         |
+| `payment-webhook`   | Receives provider webhook events, verifies signature, calls `order-confirmed`       |
+| `inventory-reserve` | Creates soft inventory holds before payment capture                                 |
 
 Transactional operations (`checkout_cart`, `confirm_order`, `reserve_inventory`) are handled by Postgres functions, not sequential queries — so partial failures are impossible.
 
@@ -147,9 +147,10 @@ Transactional operations (`checkout_cart`, `confirm_order`, `reserve_inventory`)
 **You own everything.** supacommerce makes no attempt to abstract Drizzle, abstract Supabase, or hide the database from you. The schemas are Drizzle schemas. The migrations are SQL. The edge functions are TypeScript.
 
 This means:
+
 - You can read every line of code running in your system
 - You can modify anything without fighting an abstraction layer
-- You are not locked in — delete `@supacommerce/core` and nothing breaks except your convenience wrappers
+- You are not locked in — delete `@supacommerce/client` and nothing breaks except your convenience wrappers
 
 The tradeoff: when supacommerce releases schema improvements, they don't automatically apply to your project. You read the changelog and apply relevant changes manually, the same as any schema change in your own codebase.
 
@@ -158,7 +159,7 @@ The tradeoff: when supacommerce releases schema improvements, they don't automat
 ## Packages in this repo
 
 - [`packages/cli`](./packages/cli) — `@supacommerce/cli`
-- [`packages/core`](./packages/core) — `@supacommerce/core`
+- [`packages/core`](./packages/core) — `@supacommerce/client`
 - [`packages/utils`](./packages/utils) — `@supacommerce/utils`
 
 ---

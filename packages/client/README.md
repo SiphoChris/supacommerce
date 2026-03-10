@@ -1,25 +1,25 @@
-# @supacommerce/core
+# @supacommerce/client
 
 The typed ecommerce query client for supacommerce. A thin, complete wrapper around your Supabase client that gives you an ecommerce-oriented API.
 
 ## Installation
 
 ```bash
-pnpm add @supacommerce/core @supabase/supabase-js
+pnpm add @supacommerce/client @supabase/supabase-js
 ```
 
 ## Usage
 
 ```typescript
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
-import { createClient } from "@supacommerce/core"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supacommerce/client";
 
 const supabase = createSupabaseClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
-)
+  process.env.SUPABASE_ANON_KEY!,
+);
 
-export const commerce = createClient(supabase)
+export const commerce = createClient(supabase);
 ```
 
 The client respects your Supabase auth session and RLS policies automatically. Customers can only see their own carts and orders. Products are publicly readable. No configuration required.
@@ -27,8 +27,11 @@ The client respects your Supabase auth session and RLS policies automatically. C
 For admin operations that need to bypass RLS:
 
 ```typescript
-const supabaseAdmin = createSupabaseClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-const adminCommerce = createClient(supabaseAdmin)
+const supabaseAdmin = createSupabaseClient(
+  url,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
+const adminCommerce = createClient(supabaseAdmin);
 ```
 
 ---
@@ -113,50 +116,62 @@ const { data } = await commerce.catalog.listCollections({ limit: 10 })
 
 ```typescript
 // List the current customer's orders
-const { data, count } = await commerce.orders.list({ limit: 10, status: "completed" })
+const { data, count } = await commerce.orders.list({
+  limit: 10,
+  status: "completed",
+});
 
 // Get a single order
-const order = await commerce.orders.get(orderId)
+const order = await commerce.orders.get(orderId);
 
 // Get by human-readable display ID (order number)
-const order = await commerce.orders.getByDisplayId(1042)
+const order = await commerce.orders.getByDisplayId(1042);
 ```
 
 ### `commerce.customers`
 
 ```typescript
 // Get the current customer's profile
-const customer = await commerce.customers.me()
+const customer = await commerce.customers.me();
 
 // Update profile
 const customer = await commerce.customers.updateProfile({
   firstName: "Jane",
   lastName: "Doe",
   phone: "+1234567890",
-})
+});
 
 // Address management
-const addresses = await commerce.customers.listAddresses()
-const address = await commerce.customers.addAddress({ address1: "...", city: "...", countryCode: "US" })
-const address = await commerce.customers.updateAddress(addressId, { isDefault: true })
-await commerce.customers.deleteAddress(addressId)
+const addresses = await commerce.customers.listAddresses();
+const address = await commerce.customers.addAddress({
+  address1: "...",
+  city: "...",
+  countryCode: "US",
+});
+const address = await commerce.customers.updateAddress(addressId, {
+  isDefault: true,
+});
+await commerce.customers.deleteAddress(addressId);
 ```
 
 ### `commerce.inventory`
 
 ```typescript
 // Get total available stock across all locations
-const available = await commerce.inventory.getTotalAvailable(variantId)
+const available = await commerce.inventory.getTotalAvailable(variantId);
 
 // Get full availability breakdown by location
-const availability = await commerce.inventory.getAvailability(variantId)
+const availability = await commerce.inventory.getAvailability(variantId);
 // availability.totalAvailable
 // availability.isAvailable
 // availability.levels[].locationName, .quantityAvailable
 
 // Check multiple variants efficiently
-const map = await commerce.inventory.getBulkAvailability([variantId1, variantId2])
-const qty = map.get(variantId1) // number
+const map = await commerce.inventory.getBulkAvailability([
+  variantId1,
+  variantId2,
+]);
+const qty = map.get(variantId1); // number
 ```
 
 ### `commerce.pricing`
@@ -167,8 +182,8 @@ const price = await commerce.pricing.getVariantPrice({
   variantId: "...",
   regionId: "...",
   currencyCode: "USD",
-  quantity: 2,  // for tiered pricing
-})
+  quantity: 2, // for tiered pricing
+});
 // price.amount (integer, smallest currency unit)
 // price.currencyCode
 // price.priceListId (non-null if a sale price was applied)
@@ -176,8 +191,8 @@ const price = await commerce.pricing.getVariantPrice({
 // Get prices for multiple variants at once
 const priceMap = await commerce.pricing.getBulkVariantPrices(
   [variantId1, variantId2],
-  { regionId, currencyCode: "USD" }
-)
+  { regionId, currencyCode: "USD" },
+);
 ```
 
 ### `commerce.promotions`
@@ -186,28 +201,28 @@ const priceMap = await commerce.pricing.getBulkVariantPrices(
 // Validate a code and calculate the discount
 const result = await commerce.promotions.validate({
   code: "SAVE10",
-  cartSubtotal: 5000,   // integer, smallest currency unit
-  customerId: "...",    // optional — checks per-customer usage limit
-})
+  cartSubtotal: 5000, // integer, smallest currency unit
+  customerId: "...", // optional — checks per-customer usage limit
+});
 // result.valid — boolean
 // result.discountAmount — integer
 // result.reason — string explaining why invalid (if !valid)
 
 // List automatic promotions (applied without a code)
-const promos = await commerce.promotions.listAutomatic()
+const promos = await commerce.promotions.listAutomatic();
 ```
 
 ### `commerce.regions`
 
 ```typescript
 // List all active regions
-const regions = await commerce.regions.list()
+const regions = await commerce.regions.list();
 
 // Get a region by ID
-const region = await commerce.regions.get(regionId)
+const region = await commerce.regions.get(regionId);
 
 // Find the region for a country code
-const region = await commerce.regions.getByCountry("US")
+const region = await commerce.regions.getByCountry("US");
 ```
 
 ### `commerce.fulfillment`
@@ -216,11 +231,11 @@ const region = await commerce.regions.getByCountry("US")
 // List shipping options for a region
 const options = await commerce.fulfillment.listShippingOptions({
   regionId: "...",
-  cartSubtotal: 5000,  // filters out options with unmet min_subtotal requirements
-})
+  cartSubtotal: 5000, // filters out options with unmet min_subtotal requirements
+});
 
 // Get a single shipping option
-const option = await commerce.fulfillment.getShippingOption(optionId)
+const option = await commerce.fulfillment.getShippingOption(optionId);
 ```
 
 ### `commerce.tax`
@@ -230,36 +245,40 @@ const option = await commerce.fulfillment.getShippingOption(optionId)
 const tax = await commerce.tax.calculate({
   subtotal: 5000,
   countryCode: "US",
-  provinceCode: "CA",  // optional — matches province-specific rates
-})
+  provinceCode: "CA", // optional — matches province-specific rates
+});
 // tax.taxTotal — integer
 // tax.rate — decimal (0.0875 = 8.75%)
 
 // List all tax regions
-const taxRegions = await commerce.tax.listTaxRegions("US")
+const taxRegions = await commerce.tax.listTaxRegions("US");
 ```
 
 ### `commerce.salesChannels`
 
 ```typescript
-const channels = await commerce.salesChannels.list()
-const defaultChannel = await commerce.salesChannels.getDefault()
-const channel = await commerce.salesChannels.get(channelId)
+const channels = await commerce.salesChannels.list();
+const defaultChannel = await commerce.salesChannels.getDefault();
+const channel = await commerce.salesChannels.get(channelId);
 ```
 
 ### `commerce.admin`
 
 ```typescript
 // Get current admin's record (throws ForbiddenError if not admin)
-const me = await adminCommerce.admin.me()
+const me = await adminCommerce.admin.me();
 
 // List all admins
-const { data } = await adminCommerce.admin.list()
+const { data } = await adminCommerce.admin.list();
 
 // Create, update, deactivate
-const admin = await adminCommerce.admin.create({ userId, email, role: "manager" })
-const admin = await adminCommerce.admin.update(adminId, { role: "admin" })
-await adminCommerce.admin.deactivate(adminId)
+const admin = await adminCommerce.admin.create({
+  userId,
+  email,
+  role: "manager",
+});
+const admin = await adminCommerce.admin.update(adminId, { role: "admin" });
+await adminCommerce.admin.deactivate(adminId);
 ```
 
 ---
@@ -269,10 +288,14 @@ await adminCommerce.admin.deactivate(adminId)
 All methods throw typed errors from `@supacommerce/utils`:
 
 ```typescript
-import { NotFoundError, ValidationError, ForbiddenError } from "@supacommerce/utils"
+import {
+  NotFoundError,
+  ValidationError,
+  ForbiddenError,
+} from "@supacommerce/utils";
 
 try {
-  const product = await commerce.catalog.getProduct(id)
+  const product = await commerce.catalog.getProduct(id);
 } catch (err) {
   if (err instanceof NotFoundError) {
     // 404 — product doesn't exist or isn't published
@@ -287,11 +310,11 @@ try {
 All monetary amounts are integers in the smallest currency unit (cents for USD, pence for GBP). Use `@supacommerce/utils` to format them:
 
 ```typescript
-import { formatCurrency } from "@supacommerce/utils"
+import { formatCurrency } from "@supacommerce/utils";
 
-formatCurrency(2999, "USD") // "$29.99"
-formatCurrency(2999, "GBP") // "£29.99"
-formatCurrency(300, "JPY")  // "¥300"
+formatCurrency(2999, "USD"); // "$29.99"
+formatCurrency(2999, "GBP"); // "£29.99"
+formatCurrency(300, "JPY"); // "¥300"
 ```
 
 ---

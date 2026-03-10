@@ -38,9 +38,7 @@ import {
   TextField as MuiTextField,
   Chip,
   Box,
-  Typography,
   CircularProgress,
-  Box,
 } from "@mui/material";
 
 // ─── ProductBulkDeleteButton ──────────────────────────────────────────────────

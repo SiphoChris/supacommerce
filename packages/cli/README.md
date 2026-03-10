@@ -66,7 +66,7 @@ your-project/
 1. **Install dependencies**
 
    ```bash
-   pnpm add drizzle-orm @supabase/supabase-js @supacommerce/core
+   pnpm add drizzle-orm @supabase/supabase-js @supacommerce/client
    pnpm add -D drizzle-kit
    ```
 

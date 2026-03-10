@@ -6,14 +6,13 @@
   "scripts": {
     "build": "pnpm -r build",
     "build:cli": "pnpm --filter @supacommerce/cli build",
-    "build:core": "pnpm --filter @supacommerce/core build",
+    "build:client": "pnpm --filter @supacommerce/client build",
     "build:utils": "pnpm --filter @supacommerce/utils build",
     "dev": "pnpm -r dev",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "clean": "pnpm -r clean && rm -rf node_modules",
     "publish:all": "pnpm publish -r --access public",
-
     "install:dashboard": "pnpm install --filter dashboard",
     "dev:dashboard": "pnpm --filter dashboard dev",
     "build:dashboard": "pnpm --filter dashboard build",

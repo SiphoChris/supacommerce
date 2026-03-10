@@ -769,7 +769,7 @@ interface CommerceClient {
  *
  * @example
  * import { createClient as createSupabaseClient } from "@supabase/supabase-js"
- * import { createClient } from "@supacommerce/core"
+ * import { createClient } from "@supacommerce/client"
  *
  * const supabase = createSupabaseClient(url, anonKey)
  * const commerce = createClient(supabase)
