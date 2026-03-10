@@ -222,12 +222,16 @@ export class CartClient {
     if (!title || unitPrice === undefined) {
       const { data: variant } = await this.supabase
         .from("product_variants")
-        .select("title, product_id")
+        .select("title, thumbnail, product_id")
         .eq("id", input.variantId)
         .maybeSingle();
 
       if (variant) {
-        const v = variant as { title: string; product_id: string };
+        const v = variant as {
+          title: string;
+          thumbnail: string | null;
+          product_id: string;
+        };
         productId = productId ?? v.product_id;
 
         // Fetch product separately — joining products(title,thumbnail) via PostgREST

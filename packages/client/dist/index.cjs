@@ -94,7 +94,7 @@ var CartClient = class {
     let productId = input.productId;
     let unitPrice = input.unitPrice;
     if (!title || unitPrice === void 0) {
-      const { data: variant } = await this.supabase.from("product_variants").select("title, thumbnail, product_id").eq("id", input.variantId).maybeSingle();
+      const { data: variant } = await this.supabase.from("product_variants").select("title, product_id").eq("id", input.variantId).maybeSingle();
       if (variant) {
         const v = variant;
         productId = productId ?? v.product_id;

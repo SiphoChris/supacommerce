@@ -115,11 +115,11 @@ importers:
         specifier: ^2.98.0
         version: 2.98.0
       '@supacommerce/client':
-        specifier: ^0.19.0
-        version: 0.19.0(@supabase/supabase-js@2.98.0)
+        specifier: ^0.20.0
+        version: 0.20.0(@supabase/supabase-js@2.98.0)
       '@supacommerce/utils':
-        specifier: ^0.19.0
-        version: 0.19.0
+        specifier: ^0.20.0
+        version: 0.20.0
       '@tailwindcss/vite':
         specifier: ^4.2.1
         version: 4.2.1(vite@7.3.1(@types/node@24.12.0)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0))
@@ -1003,13 +1003,13 @@ packages:
     resolution: {integrity: sha512-Ohc97CtInLwZyiSASz7tT9/Abm/vqnIbO9REp+PivVUII8UZsuI3bngRQnYgJdFoOIwvaEII1fX1qy8x0CyNiw==}
     engines: {node: '>=20.0.0'}
 
-  '@supacommerce/client@0.19.0':
-    resolution: {integrity: sha512-LbwU4ZkTTOi9XHLKAGBs856VtikYtIT/sL/1aRWGqDUD0q5sOwBSFtR3PifqPuNbirywskxqEqZRSYhygwVTSw==}
+  '@supacommerce/client@0.20.0':
+    resolution: {integrity: sha512-repBPFV/37L2bXXeQRRj9eJsWBQh9xQKEef9w7pK6m9y71aZkJNd37EEFd7Qkn0/1J2t9SuCvaRbt69/TkYCDw==}
     peerDependencies:
       '@supabase/supabase-js': ^2.0.0
 
-  '@supacommerce/utils@0.19.0':
-    resolution: {integrity: sha512-M4gdKuXgH/pFFH7DqFxluqO41KZ5EcDCjIkoJTse0Du2nc7BMmiGNuRv0xWurvy7mdnvT7wlEhcgbWsoGTSDGQ==}
+  '@supacommerce/utils@0.20.0':
+    resolution: {integrity: sha512-Tlo/2x8J0um09VoaDjZsER6umfXw0TU7x4HrBaG7ofjqsSz2o9ROZVqtdtv7a8nQNf7RTLv+J5i1Ruamtg0s3A==}
 
   '@tailwindcss/node@4.2.1':
     resolution: {integrity: sha512-jlx6sLk4EOwO6hHe1oCGm1Q4AN/s0rSrTTPBGPM0/RQ6Uylwq17FuU8IeJJKEjtc6K6O07zsvP+gDO6MMWo7pg==}
@@ -3616,12 +3616,12 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@supacommerce/client@0.19.0(@supabase/supabase-js@2.98.0)':
+  '@supacommerce/client@0.20.0(@supabase/supabase-js@2.98.0)':
     dependencies:
       '@supabase/supabase-js': 2.98.0
-      '@supacommerce/utils': 0.19.0
+      '@supacommerce/utils': 0.20.0
 
-  '@supacommerce/utils@0.19.0': {}
+  '@supacommerce/utils@0.20.0': {}
 
   '@tailwindcss/node@4.2.1':
     dependencies:
