@@ -122,6 +122,7 @@ export default function CheckoutPage() {
     .flatMap((r) => r.countries)
     .sort((a, b) => a.name.localeCompare(b.name));
 
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-14 fade-in">
       <h1

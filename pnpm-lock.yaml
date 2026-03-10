@@ -115,11 +115,11 @@ importers:
         specifier: ^2.98.0
         version: 2.98.0
       '@supacommerce/client':
-        specifier: ^0.17.0
-        version: 0.17.0(@supabase/supabase-js@2.98.0)
+        specifier: ^0.18.0
+        version: 0.18.0(@supabase/supabase-js@2.98.0)
       '@supacommerce/utils':
-        specifier: ^0.17.0
-        version: 0.17.0
+        specifier: ^0.18.0
+        version: 0.18.0
       '@tailwindcss/vite':
         specifier: ^4.2.1
         version: 4.2.1(vite@7.3.1(@types/node@24.12.0)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0))
@@ -195,7 +195,7 @@ importers:
         specifier: ^11.0.4
         version: 11.0.4
       '@types/node':
-        specifier: ^20.17.0
+        specifier: ^20.18.0
         version: 20.19.35
       tsup:
         specifier: ^8.0.2
@@ -1003,13 +1003,13 @@ packages:
     resolution: {integrity: sha512-Ohc97CtInLwZyiSASz7tT9/Abm/vqnIbO9REp+PivVUII8UZsuI3bngRQnYgJdFoOIwvaEII1fX1qy8x0CyNiw==}
     engines: {node: '>=20.0.0'}
 
-  '@supacommerce/client@0.17.0':
-    resolution: {integrity: sha512-DA4amTJRidh4LHt/cytcpZPW0aMYCuGLco64osn1eLvewK097wB+HGZj4tC0RV7zHCwK/jRPeTpyb/xYHLgOtg==}
+  '@supacommerce/client@0.18.0':
+    resolution: {integrity: sha512-oNWaLAsBUVWg0oLT2HbsFmb5SaVFcqp54YzsS+0Rm4jMYMYUop43QY/K7ufNvg7jd9bdtNJSYKv63W7gKxHEBg==}
     peerDependencies:
       '@supabase/supabase-js': ^2.0.0
 
-  '@supacommerce/utils@0.17.0':
-    resolution: {integrity: sha512-97kdbxZ1JwOAmkJKLh5FeLKiHXKTM43scEh+jhskHPBPllVEdpoxoH0SG9irYVLZiwtsgLhdV9XkWe1asv50JA==}
+  '@supacommerce/utils@0.18.0':
+    resolution: {integrity: sha512-9iyNfXNSCww5VRPVEuMqJIrAEZTSlTPUhkIwQkrjpH3oE6EKfBvEymV/XjRsx/Fl3J5VNkUNs6DNXfnFG8D40w==}
 
   '@tailwindcss/node@4.2.1':
     resolution: {integrity: sha512-jlx6sLk4EOwO6hHe1oCGm1Q4AN/s0rSrTTPBGPM0/RQ6Uylwq17FuU8IeJJKEjtc6K6O07zsvP+gDO6MMWo7pg==}
@@ -3616,12 +3616,12 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@supacommerce/client@0.17.0(@supabase/supabase-js@2.98.0)':
+  '@supacommerce/client@0.18.0(@supabase/supabase-js@2.98.0)':
     dependencies:
       '@supabase/supabase-js': 2.98.0
-      '@supacommerce/utils': 0.17.0
+      '@supacommerce/utils': 0.18.0
 
-  '@supacommerce/utils@0.17.0': {}
+  '@supacommerce/utils@0.18.0': {}
 
   '@tailwindcss/node@4.2.1':
     dependencies:

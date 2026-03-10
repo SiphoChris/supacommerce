@@ -38,10 +38,15 @@ var CartClient = class {
     const {
       data: { user }
     } = await this.supabase.auth.getUser();
-    if (!user) throw new import_utils.ValidationError("User must be authenticated to access a cart");
+    if (!user)
+      throw new import_utils.ValidationError("User must be authenticated to access a cart");
     let { data: customer } = await this.supabase.from("customers").select("id").eq("user_id", user.id).maybeSingle();
     if (!customer) {
-      const { data: created2, error: createError } = await this.supabase.from("customers").insert({ user_id: user.id, email: user.email ?? null, is_anonymous: false }).select("id").single();
+      const { data: created2, error: createError } = await this.supabase.from("customers").insert({
+        user_id: user.id,
+        email: user.email ?? null,
+        is_anonymous: false
+      }).select("id").single();
       if (createError || !created2) throw new import_utils.NotFoundError("Customer profile");
       customer = created2;
     }
@@ -71,8 +76,9 @@ var CartClient = class {
    * If the variant is already in the cart, increments the quantity.
    */
   async addItem(cartId, input) {
-    if (input.quantity < 1) throw new import_utils.ValidationError("Quantity must be at least 1");
-    const { data: existing } = await this.supabase.from("cart_line_items").select("id, quantity, unit_price").eq("cart_id", cartId).eq("variant_id", input.variantId).single();
+    if (input.quantity < 1)
+      throw new import_utils.ValidationError("Quantity must be at least 1");
+    const { data: existing } = await this.supabase.from("cart_line_items").select("id, quantity, unit_price").eq("cart_id", cartId).eq("variant_id", input.variantId).maybeSingle();
     if (existing) {
       const e = existing;
       const newQty = e.quantity + input.quantity;
@@ -88,13 +94,14 @@ var CartClient = class {
     let productId = input.productId;
     let unitPrice = input.unitPrice;
     if (!title || unitPrice === void 0) {
-      const { data: variant } = await this.supabase.from("product_variants").select("title, thumbnail, product_id, products(title, thumbnail)").eq("id", input.variantId).single();
+      const { data: variant } = await this.supabase.from("product_variants").select("title, thumbnail, product_id").eq("id", input.variantId).maybeSingle();
       if (variant) {
         const v = variant;
-        const product = Array.isArray(v.products) ? v.products[0] ?? null : v.products;
-        title = title ?? `${product?.title ?? ""} \u2014 ${v.title}`.trim();
-        thumbnail = thumbnail ?? product?.thumbnail ?? null;
         productId = productId ?? v.product_id;
+        const { data: product } = await this.supabase.from("products").select("title, thumbnail").eq("id", v.product_id).maybeSingle();
+        const p = product;
+        title = title ?? `${p?.title ?? ""} \u2014 ${v.title}`.trim();
+        thumbnail = thumbnail ?? p?.thumbnail ?? null;
       }
     }
     const resolvedUnitPrice = unitPrice ?? 0;
@@ -117,9 +124,10 @@ var CartClient = class {
    * Update a line item's quantity. Set to 0 to remove the item.
    */
   async updateItem(cartId, lineItemId, input) {
-    if (input.quantity < 0) throw new import_utils.ValidationError("Quantity cannot be negative");
+    if (input.quantity < 0)
+      throw new import_utils.ValidationError("Quantity cannot be negative");
     if (input.quantity === 0) return this.removeItem(cartId, lineItemId);
-    const { data: item } = await this.supabase.from("cart_line_items").select("unit_price").eq("id", lineItemId).eq("cart_id", cartId).single();
+    const { data: item } = await this.supabase.from("cart_line_items").select("unit_price").eq("id", lineItemId).eq("cart_id", cartId).maybeSingle();
     if (!item) throw new import_utils.NotFoundError("Cart line item", lineItemId);
     const unitPrice = item.unit_price;
     const { error } = await this.supabase.from("cart_line_items").update({
@@ -142,16 +150,24 @@ var CartClient = class {
    * Set the shipping address on the cart.
    */
   async setShippingAddress(cartId, address) {
-    const { error } = await this.supabase.from("carts").update({ shipping_address: address, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", cartId);
-    if (error) throw new Error(`Failed to set shipping address: ${error.message}`);
+    const { error } = await this.supabase.from("carts").update({
+      shipping_address: address,
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    }).eq("id", cartId);
+    if (error)
+      throw new Error(`Failed to set shipping address: ${error.message}`);
     return this.get(cartId);
   }
   /**
    * Set the billing address on the cart.
    */
   async setBillingAddress(cartId, address) {
-    const { error } = await this.supabase.from("carts").update({ billing_address: address, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", cartId);
-    if (error) throw new Error(`Failed to set billing address: ${error.message}`);
+    const { error } = await this.supabase.from("carts").update({
+      billing_address: address,
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    }).eq("id", cartId);
+    if (error)
+      throw new Error(`Failed to set billing address: ${error.message}`);
     return this.get(cartId);
   }
   /**
@@ -166,7 +182,7 @@ var CartClient = class {
    * Set or replace the shipping method on the cart.
    */
   async setShippingMethod(cartId, shippingOptionId) {
-    const { data: option } = await this.supabase.from("shipping_options").select("id, name, amount").eq("id", shippingOptionId).single();
+    const { data: option } = await this.supabase.from("shipping_options").select("id, name, amount").eq("id", shippingOptionId).maybeSingle();
     if (!option) throw new import_utils.NotFoundError("Shipping option", shippingOptionId);
     const opt = option;
     await this.supabase.from("cart_shipping_methods").delete().eq("cart_id", cartId);
@@ -176,14 +192,15 @@ var CartClient = class {
       name: opt.name,
       price: opt.amount
     });
-    if (error) throw new Error(`Failed to set shipping method: ${error.message}`);
+    if (error)
+      throw new Error(`Failed to set shipping method: ${error.message}`);
     return this.get(cartId);
   }
   /**
    * Apply a promotion code to the cart.
    */
   async applyPromotion(cartId, code) {
-    const { data: cart } = await this.supabase.from("carts").select("promotion_codes").eq("id", cartId).single();
+    const { data: cart } = await this.supabase.from("carts").select("promotion_codes").eq("id", cartId).maybeSingle();
     if (!cart) throw new import_utils.NotFoundError("Cart", cartId);
     const existing = cart.promotion_codes ?? [];
     const normalised = code.toUpperCase();
@@ -199,7 +216,7 @@ var CartClient = class {
    * Remove a promotion code from the cart.
    */
   async removePromotion(cartId, code) {
-    const { data: cart } = await this.supabase.from("carts").select("promotion_codes").eq("id", cartId).single();
+    const { data: cart } = await this.supabase.from("carts").select("promotion_codes").eq("id", cartId).maybeSingle();
     if (!cart) throw new import_utils.NotFoundError("Cart", cartId);
     const existing = cart.promotion_codes ?? [];
     const normalised = code.toUpperCase();
@@ -214,19 +231,24 @@ var CartClient = class {
    * Initiate checkout. Calls the cart-checkout edge function.
    */
   async checkout(cartId, options) {
-    const { data, error } = await this.supabase.functions.invoke("cart-checkout", {
-      body: {
-        cartId,
-        paymentProvider: options.paymentProvider,
-        billingAddress: options.billingAddress
+    const { data, error } = await this.supabase.functions.invoke(
+      "cart-checkout",
+      {
+        body: {
+          cartId,
+          paymentProvider: options.paymentProvider,
+          billingAddress: options.billingAddress
+        }
       }
-    });
+    );
     if (error) throw new Error(`Checkout failed: ${error.message}`);
     return data;
   }
   // ─── Private helpers ────────────────────────────────────────────────────────
   mapCart(raw) {
-    const lineItems = (raw["cart_line_items"] ?? []).map(this.mapLineItem);
+    const lineItems = (raw["cart_line_items"] ?? []).map(
+      this.mapLineItem
+    );
     const shippingMethods = (raw["cart_shipping_methods"] ?? []).map(this.mapShippingMethod);
     const subtotal = lineItems.reduce((sum, item) => sum + item.subtotal, 0);
     const shippingTotal = shippingMethods.reduce((sum, m) => sum + m.price, 0);
