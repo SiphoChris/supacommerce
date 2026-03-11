@@ -1,26 +1,28 @@
-import { useEffect, useRef } from "react"
-import { Link } from "react-router-dom"
-import { useCart } from "../lib/cart"
-import { formatCurrency } from "@supacommerce/utils"
+import { useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
+import { useCart } from "../lib/cart";
+import { formatCurrency } from "@supacommerce/utils";
 
 export default function CartDrawer() {
-  const { cart, open, closeCart, updateItem, removeItem, loading } = useCart()
-  const drawerRef = useRef<HTMLDivElement>(null)
+  const { cart, open, closeCart, updateItem, removeItem, loading } = useCart();
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   // Trap focus / close on Escape
   useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closeCart() }
-    document.addEventListener("keydown", handler)
-    document.body.style.overflow = "hidden"
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeCart();
+    };
+    document.addEventListener("keydown", handler);
+    document.body.style.overflow = "hidden";
     return () => {
-      document.removeEventListener("keydown", handler)
-      document.body.style.overflow = ""
-    }
-  }, [open, closeCart])
+      document.removeEventListener("keydown", handler);
+      document.body.style.overflow = "";
+    };
+  }, [open, closeCart]);
 
-  const currency = cart?.currencyCode ?? "USD"
-  const fmt = (n: number) => formatCurrency(n, currency)
+  const currency = cart?.currencyCode ?? "USD";
+  const fmt = (n: number) => formatCurrency(n, currency);
 
   return (
     <>
@@ -28,7 +30,10 @@ export default function CartDrawer() {
       {open && (
         <div
           className="fixed inset-0 z-50"
-          style={{ background: "rgba(26,24,20,0.35)", backdropFilter: "blur(2px)" }}
+          style={{
+            background: "rgba(26,24,20,0.35)",
+            backdropFilter: "blur(2px)",
+          }}
           onClick={closeCart}
         />
       )}
@@ -53,7 +58,9 @@ export default function CartDrawer() {
           className="flex items-center justify-between px-6 py-5"
           style={{ borderBottom: "1px solid var(--color-border)" }}
         >
-          <span style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem" }}>
+          <span
+            style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem" }}
+          >
             Your Bag
           </span>
           <button
@@ -61,8 +68,15 @@ export default function CartDrawer() {
             style={{ color: "var(--color-ink-muted)" }}
             aria-label="Close cart"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M18 6 6 18M6 6l12 12"/>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path d="M18 6 6 18M6 6l12 12" />
             </svg>
           </button>
         </div>
@@ -71,12 +85,22 @@ export default function CartDrawer() {
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {!cart || cart.lineItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" style={{ color: "var(--color-ink-faint)" }}>
-                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <path d="M16 10a4 4 0 0 1-8 0"/>
+              <svg
+                width="40"
+                height="40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1"
+                style={{ color: "var(--color-ink-faint)" }}
+              >
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
-              <p style={{ color: "var(--color-ink-muted)", fontSize: "0.9rem" }}>
+              <p
+                style={{ color: "var(--color-ink-muted)", fontSize: "0.9rem" }}
+              >
                 Your bag is empty
               </p>
               <button
@@ -98,7 +122,10 @@ export default function CartDrawer() {
                 <li
                   key={item.id}
                   className="flex gap-4"
-                  style={{ borderBottom: "1px solid var(--color-border)", paddingBottom: "1.25rem" }}
+                  style={{
+                    borderBottom: "1px solid var(--color-border)",
+                    paddingBottom: "1.25rem",
+                  }}
                 >
                   {/* Thumbnail */}
                   <div
@@ -121,7 +148,9 @@ export default function CartDrawer() {
                   {/* Info */}
                   <div className="flex-1 flex flex-col gap-1.5">
                     <div className="flex items-start justify-between gap-2">
-                      <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>{item.title}</span>
+                      <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>
+                        {item.title}
+                      </span>
                       <span
                         style={{
                           fontFamily: "var(--font-mono)",
@@ -134,7 +163,12 @@ export default function CartDrawer() {
                     </div>
 
                     {item.subtitle && (
-                      <span style={{ fontSize: "0.78rem", color: "var(--color-ink-muted)" }}>
+                      <span
+                        style={{
+                          fontSize: "0.78rem",
+                          color: "var(--color-ink-muted)",
+                        }}
+                      >
                         {item.subtitle}
                       </span>
                     )}
@@ -143,13 +177,19 @@ export default function CartDrawer() {
                     <div className="flex items-center gap-3 mt-auto">
                       <div
                         className="flex items-center"
-                        style={{ border: "1px solid var(--color-border)", borderRadius: 4 }}
+                        style={{
+                          border: "1px solid var(--color-border)",
+                          borderRadius: 4,
+                        }}
                       >
                         <button
                           onClick={() => updateItem(item.id, item.quantity - 1)}
                           disabled={loading}
                           className="w-7 h-7 flex items-center justify-center"
-                          style={{ color: "var(--color-ink-muted)", fontSize: "1rem" }}
+                          style={{
+                            color: "var(--color-ink-muted)",
+                            fontSize: "1rem",
+                          }}
                         >
                           −
                         </button>
@@ -167,7 +207,10 @@ export default function CartDrawer() {
                           onClick={() => updateItem(item.id, item.quantity + 1)}
                           disabled={loading}
                           className="w-7 h-7 flex items-center justify-center"
-                          style={{ color: "var(--color-ink-muted)", fontSize: "1rem" }}
+                          style={{
+                            color: "var(--color-ink-muted)",
+                            fontSize: "1rem",
+                          }}
                         >
                           +
                         </button>
@@ -176,7 +219,10 @@ export default function CartDrawer() {
                       <button
                         onClick={() => removeItem(item.id)}
                         disabled={loading}
-                        style={{ fontSize: "0.75rem", color: "var(--color-ink-faint)" }}
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--color-ink-faint)",
+                        }}
                       >
                         Remove
                       </button>
@@ -196,18 +242,29 @@ export default function CartDrawer() {
           >
             <div className="flex justify-between text-sm">
               <span style={{ color: "var(--color-ink-muted)" }}>Subtotal</span>
-              <span style={{ fontFamily: "var(--font-mono)" }}>{fmt(cart.subtotal)}</span>
+              <span style={{ fontFamily: "var(--font-mono)" }}>
+                {fmt(cart.subtotal)}
+              </span>
             </div>
             {cart.shippingTotal > 0 && (
               <div className="flex justify-between text-sm">
-                <span style={{ color: "var(--color-ink-muted)" }}>Shipping</span>
-                <span style={{ fontFamily: "var(--font-mono)" }}>{fmt(cart.shippingTotal)}</span>
+                <span style={{ color: "var(--color-ink-muted)" }}>
+                  Shipping
+                </span>
+                <span style={{ fontFamily: "var(--font-mono)" }}>
+                  {fmt(cart.shippingTotal)}
+                </span>
               </div>
             )}
             {cart.discountTotal > 0 && (
               <div className="flex justify-between text-sm">
                 <span style={{ color: "var(--color-accent)" }}>Discount</span>
-                <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-accent)" }}>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    color: "var(--color-accent)",
+                  }}
+                >
                   −{fmt(cart.discountTotal)}
                 </span>
               </div>
@@ -225,8 +282,12 @@ export default function CartDrawer() {
             <Link
               to="/checkout"
               onClick={closeCart}
-              className="mt-2 w-full flex items-center justify-center py-3.5 text-white text-sm tracking-widest uppercase font-medium"
-              style={{ background: "var(--color-ink)", letterSpacing: "0.1em" }}
+              className="mt-2 w-full flex items-center justify-center py-3.5 text-sm tracking-widest uppercase font-medium"
+              style={{
+                background: "var(--color-ink)",
+                letterSpacing: "0.1em",
+                color: "#ffffff",
+              }}
             >
               Proceed to checkout
             </Link>
@@ -234,5 +295,5 @@ export default function CartDrawer() {
         )}
       </div>
     </>
-  )
+  );
 }
