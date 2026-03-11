@@ -14,17 +14,13 @@ pnpm add @supacommerce/utils
 
 All monetary values in supacommerce are stored as integers in the smallest currency unit. These helpers handle conversion and formatting.
 
+Zero-decimal currencies (JPY, KRW, VND, etc.) are handled automatically.
+
 ```typescript
-import {
-  toMinorUnit,
-  fromMinorUnit,
-  formatCurrency,
-  addMoney,
-  subtractMoney,
-} from "@supacommerce/utils";
+import { toMinorUnit, fromMinorUnit, formatCurrency, addMoney, subtractMoney } from "@supacommerce/utils";
 
 toMinorUnit(29.99, "USD");  // 2999
-toMinorUnit(100, "JPY");    // 100  (JPY is zero-decimal)
+toMinorUnit(100, "JPY");    // 100  (zero-decimal)
 
 fromMinorUnit(2999, "USD"); // 29.99
 fromMinorUnit(100, "JPY");  // 100
@@ -45,7 +41,7 @@ subtractMoney(1999, 500); // 1499
 A typed alternative to `try/catch` for operations that can fail predictably.
 
 ```typescript
-import { ok, err, isOk, unwrap, type Result } from "@supacommerce/utils";
+import { ok, err, isOk, isErr, unwrap, type Result } from "@supacommerce/utils";
 
 function divide(a: number, b: number): Result<number, Error> {
   if (b === 0) return err(new Error("Division by zero"));
@@ -56,7 +52,9 @@ const result = divide(10, 2);
 
 if (isOk(result)) {
   console.log(result.value); // 5
-} else {
+}
+
+if (isErr(result)) {
   console.error(result.error.message);
 }
 
@@ -78,16 +76,26 @@ import {
   InventoryError,
   PaymentError,
 } from "@supacommerce/utils";
+```
 
+| Class | Status | Code |
+| --- | --- | --- |
+| `NotFoundError` | 404 | `NOT_FOUND` |
+| `ValidationError` | 400 | `VALIDATION_ERROR` |
+| `UnauthorizedError` | 401 | `UNAUTHORIZED` |
+| `ForbiddenError` | 403 | `FORBIDDEN` |
+| `ConflictError` | 409 | `CONFLICT` |
+| `InventoryError` | 422 | `INVENTORY_ERROR` |
+| `PaymentError` | 402 | `PAYMENT_ERROR` |
+
+```typescript
 const e = new NotFoundError("Product", "abc-123");
 e.statusCode; // 404
 e.code;       // "NOT_FOUND"
 e.message;    // "Product with id 'abc-123' not found"
 
-const ve = new ValidationError("Invalid email", {
-  email: "Must be a valid email",
-});
-ve.fields; // { email: "Must be a valid email" }
+const ve = new ValidationError("Invalid email", { email: "Must be a valid email" });
+ve.fields;    // { email: "Must be a valid email" }
 ```
 
 ---
@@ -95,18 +103,14 @@ ve.fields; // { email: "Must be a valid email" }
 ## Pagination
 
 ```typescript
-import {
-  buildPaginatedResult,
-  type PaginationParams,
-  type PaginatedResult,
-} from "@supacommerce/utils";
+import { buildPaginatedResult, type PaginationParams, type PaginatedResult } from "@supacommerce/utils";
 
 const result = buildPaginatedResult(data, totalCount, { limit: 20, offset: 0 });
-// result.data     — the items
-// result.count    — total count
+// result.data
+// result.count
 // result.limit
 // result.offset
-// result.hasMore  — boolean
+// result.hasMore
 ```
 
 ---
@@ -127,8 +131,8 @@ generateId("order"); // "order_x9y8z7w6v5u4t3s2"
 ```typescript
 import { nowISO, isPast, isFuture } from "@supacommerce/utils";
 
-nowISO();                           // "2024-06-15T12:34:56.789Z"
-isPast("2020-01-01T00:00:00Z");    // true
+nowISO();                          // "2024-06-15T12:34:56.789Z"
+isPast("2020-01-01T00:00:00Z");   // true
 isFuture("2099-01-01T00:00:00Z"); // true
 ```
 
@@ -146,6 +150,10 @@ type T = RequireKeys<{ a?: string; b?: string }, "a">;
 // Make all keys optional except specified ones
 type T = PartialExcept<{ a: string; b: string; c: string }, "a">;
 // { a: string; b?: string; c?: string }
+
+// Deep partial
+type T = DeepPartial<{ a: { b: string } }>;
+// { a?: { b?: string } }
 ```
 
 ---

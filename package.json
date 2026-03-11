@@ -13,6 +13,7 @@
     "typecheck": "pnpm -r typecheck",
     "clean": "pnpm -r clean && rm -rf node_modules",
     "publish:all": "pnpm publish -r --access public",
+    
     "install:dashboard": "pnpm install --filter dashboard",
     "dev:dashboard": "pnpm --filter dashboard dev",
     "build:dashboard": "pnpm --filter dashboard build",
