@@ -116,9 +116,7 @@ export function PriceEdit() {
   return (
     <Edit>
       <SimpleForm>
-        <ReferenceInput source="currency_code" reference="currencies">
-          <AutocompleteInput optionText="name" optionValue="code" required />
-        </ReferenceInput>
+        <TextInput source="currency_code" required />
         <NumberInput
           source="amount"
           helperText="In cents, e.g. 1099 = R10.99"
@@ -145,9 +143,7 @@ export function PriceCreate() {
             required
           />
         </ReferenceInput>
-        <ReferenceInput source="currency_code" reference="currencies">
-          <AutocompleteInput optionText="name" optionValue="code" required />
-        </ReferenceInput>
+        <TextInput source="currency_code" required />
         <NumberInput
           source="amount"
           helperText="In cents, e.g. 1099 = R10.99"

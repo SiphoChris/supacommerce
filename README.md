@@ -24,7 +24,7 @@ A pnpm monorepo containing three packages:
 npx @supacommerce/cli init
 ```
 
-That's it. The CLI copies the following into your project:
+The CLI copies the following into your project:
 
 - **14 Drizzle schema files** → `src/ecommerce/schema/`
 - **4 Supabase edge functions** → `supabase/functions/`
@@ -38,36 +38,59 @@ From that point on, all files are yours. Read them. Modify them. Delete what you
 
 ## How it works
 
-### 1. The CLI copies files into your project
+### 1. Run the CLI
 
 ```bash
 npx @supacommerce/cli init
 ```
 
-The CLI detects whether you already have a `src/` directory and places files appropriately. It warns you before overwriting anything.
+### 2. Install dependencies
 
-### 2. You generate and apply migrations
+```bash
+pnpm add drizzle-orm @supabase/supabase-js @supacommerce/client
+pnpm add -D drizzle-kit
+```
 
-The schemas are plain Drizzle ORM TypeScript files. You control the migration process:
+### 3. Configure Drizzle
 
 ```bash
 mv drizzle.config.example.ts drizzle.config.ts
-# add DATABASE_URL to .env
-
-pnpm db:generate        # generates SQL from your schemas
-supabase db push        # applies to your Supabase project
+# Add DATABASE_URL to your .env
 ```
 
-### 3. You apply RLS policies and Postgres functions
+### 4. Generate and apply migrations
 
-```sql
--- Paste supabase/rls.sql into your Supabase SQL Editor
--- Paste supabase/functions.sql into your Supabase SQL Editor
+```bash
+pnpm db:generate
+supabase db push
 ```
 
-The RLS policies are sensible defaults — public read on products, own-data-only on carts and orders. Read and adjust them for your use case.
+### 5. Apply RLS policies and Postgres functions
 
-### 4. You use the query client
+Open the Supabase SQL Editor and run `rls.sql`, then `functions.sql`. Migrations don't apply these — they must be pasted in manually.
+
+### 6. Set up your first admin
+
+```bash
+SUPABASE_URL=https://xxx.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=your-key \
+ADMIN_EMAIL=you@example.com \
+ADMIN_PASSWORD=yourpassword \
+ADMIN_FIRST_NAME=Your \
+ADMIN_LAST_NAME=Name \
+pnpm seed:admin
+```
+
+### 7. Configure store fundamentals (in order)
+
+The dashboard enforces this dependency chain — set these up before creating products or pricing:
+
+1. **Currencies** — e.g. USD, ZAR
+2. **Regions** — each region references a currency
+3. **Countries** — each country belongs to a region
+4. **Tax regions & rates** — optional, reference regions
+
+### 8. Use the query client
 
 ```typescript
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
@@ -76,30 +99,24 @@ import { createClient } from "@supacommerce/client";
 const supabase = createSupabaseClient(url, anonKey);
 const commerce = createClient(supabase);
 
-// Storefront
 const products = await commerce.catalog.listProducts();
 const cart = await commerce.cart.getOrCreate();
 await commerce.cart.addItem(cart.id, { variantId, quantity: 1 });
 const orders = await commerce.orders.list();
-
-// Admin (pass service role client)
-const supabaseAdmin = createSupabaseClient(url, serviceRoleKey);
-const adminCommerce = createClient(supabaseAdmin);
-const admins = await adminCommerce.admin.list();
 ```
 
 ---
 
 ## Guest / anonymous carts
 
-Carts are tied to a Supabase auth user. For unauthenticated customers, use Supabase anonymous auth:
+Carts require a Supabase auth user. For unauthenticated customers, use anonymous auth:
 
 ```typescript
 // Creates a real auth user with no email — cart persists across sessions
 const { data } = await supabase.auth.signInAnonymously();
 
-// When the user signs up for a full account later, Supabase upgrades
-// the anonymous user and the cart is preserved.
+// When the user creates a full account later, Supabase upgrades the
+// anonymous user and the cart is preserved automatically.
 ```
 
 RLS works identically for anonymous and authenticated users — no special handling needed.
@@ -129,22 +146,42 @@ RLS works identically for anonymous and authenticated users — no special handl
 
 ## Edge functions
 
-Four Supabase edge functions are included as building blocks with clear TODO markers:
+Four Supabase edge functions are included as building blocks. Each has clear `TODO` markers where you wire in your payment provider or fulfillment logic:
 
-| Function            | What it does                                                                        |
-| ------------------- | ----------------------------------------------------------------------------------- |
-| `cart-checkout`     | Validates inventory, creates order atomically via RPC, returns payment session data |
-| `order-confirmed`   | Marks order as processing, reserves inventory — called by `payment-webhook`         |
-| `payment-webhook`   | Receives provider webhook events, verifies signature, calls `order-confirmed`       |
-| `inventory-reserve` | Creates soft inventory holds before payment capture                                 |
+| Function          | What it does                                                                        |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| `cart-checkout`   | Validates inventory, creates order atomically via RPC, returns payment session data |
+| `order-confirmed` | Marks order as processing, reserves inventory — called by `payment-webhook`         |
+| `payment-webhook` | Receives provider webhook events, verifies signature, calls `order-confirmed`       |
+| `storage-upload`  | Handles product image uploads to Supabase Storage                                   |
+| `storage-delete`  | Handles product image deletion from Supabase Storage                                |
 
-Transactional operations (`checkout_cart`, `confirm_order`, `reserve_inventory`) are handled by Postgres functions, not sequential queries — so partial failures are impossible.
+Transactional operations (`checkout_cart`, `confirm_order`, `reserve_inventory`) are handled by Postgres RPC functions — not sequential queries — so partial failures are impossible.
+
+---
+
+## Key design decisions
+
+**`product_variants` has no `thumbnail` column.** Thumbnails live on `products` only. The cart client resolves the thumbnail from the parent product automatically.
+
+**`currencies` uses `code` as its primary key** (e.g. `"usd"`, `"zar"`), not a UUID. If you're using the react-admin dashboard, configure the dataProvider accordingly:
+
+```typescript
+const dataProvider = supabaseDataProvider({
+  instanceUrl,
+  apiKey,
+  supabaseClient,
+  primaryKeys: new Map([["currencies", ["code"]]]),
+});
+```
+
+**All monetary values are integers** in the smallest currency unit. Use `@supacommerce/utils` to convert and format them.
 
 ---
 
 ## Philosophy
 
-**You own everything.** supacommerce makes no attempt to abstract Drizzle, abstract Supabase, or hide the database from you. The schemas are Drizzle schemas. The migrations are SQL. The edge functions are TypeScript.
+**You own everything.** supacommerce makes no attempt to abstract Drizzle, Supabase, or the database from you. The schemas are Drizzle schemas. The migrations are SQL. The edge functions are TypeScript.
 
 This means:
 
@@ -156,10 +193,32 @@ The tradeoff: when supacommerce releases schema improvements, they don't automat
 
 ---
 
+## Recommended `package.json` scripts
+
+```json
+{
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push:remote": "supabase db push",
+    "db:pull:remote": "supabase db pull",
+    "db:reset": "supabase db reset",
+    "db:new": "supabase migration new",
+    "db:sync": "pnpm db:generate && pnpm db:push:remote",
+    "supabase:login": "supabase login",
+    "supabase:link": "supabase link",
+    "supabase:start": "supabase start"
+  }
+}
+```
+
+---
+
 ## Packages in this repo
 
 - [`packages/cli`](./packages/cli) — `@supacommerce/cli`
-- [`packages/core`](./packages/core) — `@supacommerce/client`
+- [`packages/client`](./packages/client) — `@supacommerce/client`
 - [`packages/utils`](./packages/utils) — `@supacommerce/utils`
 
 ---
@@ -167,21 +226,12 @@ The tradeoff: when supacommerce releases schema improvements, they don't automat
 ## Development
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Build all packages
-pnpm build
-
-# Build a specific package
+pnpm build        # build all packages
 pnpm build:cli
-pnpm build:core
+pnpm build:client
 pnpm build:utils
-
-# Type-check all packages
 pnpm typecheck
-
-# Publish all packages to npm
 pnpm publish:all
 ```
 

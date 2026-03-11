@@ -22,18 +22,19 @@ npx @supacommerce/cli init --skip-confirmation
 
 ```
 your-project/
-├── drizzle.config.example.ts         ← rename to drizzle.config.ts
+├── drizzle.config.example.ts
 ├── supabase/
-│   ├── rls.sql                       ← Row Level Security policies
-│   ├── functions.sql                 ← Postgres RPC functions
+│   ├── rls.sql
+│   ├── functions.sql
 │   └── functions/
 │       ├── _shared/
-│       │   ├── cors.ts               ← CORS helpers
-│       │   └── supabaseAdmin.ts      ← Service role client
+│       │   ├── cors.ts
+│       │   └── supabaseAdmin.ts
 │       ├── cart-checkout/index.ts
 │       ├── order-confirmed/index.ts
 │       ├── payment-webhook/index.ts
-│       └── inventory-reserve/index.ts
+│       ├── storage-upload/index.ts
+│       └── storage-delete/index.ts
 └── src/
     └── ecommerce/
         └── schema/
@@ -55,79 +56,79 @@ your-project/
 
 ## Edge case handling
 
-- **Existing `src/` directory** — schemas are placed inside the existing directory at `src/ecommerce/schema/` without disturbing your existing code
-- **Files that already exist** — shown as `overwrite` in the preview table with a warning before any files are written
+- **Existing `src/` directory** — schemas are placed at `src/ecommerce/schema/` without touching your existing code
+- **Files that already exist** — shown as `overwrite` in the preview table with a warning before writing
 - **Non-existent target directory** — prompts to create it
 - **Missing template files** — fails fast with a clear error before writing anything
-- **Failed writes** — reports which files failed; any successfully written files remain
+- **Failed writes** — reports which files failed; successfully written files remain
 
 ## After running init
 
-1. **Install dependencies**
+### 1. Install dependencies
 
-   ```bash
-   pnpm add drizzle-orm @supabase/supabase-js @supacommerce/client
-   pnpm add -D drizzle-kit
-   ```
+```bash
+pnpm add drizzle-orm @supabase/supabase-js @supacommerce/client
+pnpm add -D drizzle-kit
+```
 
-2. **Configure Drizzle**
+### 2. Configure Drizzle
 
-   ```bash
-   mv drizzle.config.example.ts drizzle.config.ts
-   # Add DATABASE_URL to your .env
-   ```
+```bash
+mv drizzle.config.example.ts drizzle.config.ts
+# Add DATABASE_URL to your .env
+```
 
-3. **Start Supabase**
-   ```bash
-   supabase start
-   ```
+### 3. Generate and apply migrations
 
-## We recommend putting these scripts in your `package.json`:
+```bash
+pnpm db:generate
+supabase db push
+```
+
+### 4. Apply RLS policies and Postgres functions
+
+Open the Supabase SQL Editor and run `rls.sql`, then `functions.sql`. These are not applied by `supabase db push` — they must be pasted in manually each time you reset or re-provision.
+
+### 5. Create your first admin user
+
+```bash
+SUPABASE_URL=https://xxx.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=your-key \
+ADMIN_EMAIL=you@example.com \
+ADMIN_PASSWORD=yourpassword \
+ADMIN_FIRST_NAME=Your \
+ADMIN_LAST_NAME=Name \
+pnpm seed:admin
+```
+
+### 6. Configure store fundamentals
+
+Before creating products or pricing, set these up in the dashboard in order — each one depends on the previous:
+
+1. **Currencies** (e.g. USD, ZAR) — these are the foundation; everything else references them
+2. **Regions** — each region requires a currency
+3. **Countries** — each country belongs to a region
+4. **Tax regions & rates** — optional, reference regions
+
+## Recommended `package.json` scripts
 
 ```json
 {
   "scripts": {
-    "dev": "...",
-    "build": "...",
-    "preview": "...",
-
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
-
-    "supabase:login": "supabase login",
-    "supabase:link": "supabase link",
-    "supabase:start": "supabase start",
     "db:push:remote": "supabase db push",
     "db:pull:remote": "supabase db pull",
     "db:reset": "supabase db reset",
     "db:new": "supabase migration new",
-
-    "db:sync": "pnpm db:generate && pnpm db:push:remote"
+    "db:sync": "pnpm db:generate && pnpm db:push:remote",
+    "supabase:login": "supabase login",
+    "supabase:link": "supabase link",
+    "supabase:start": "supabase start"
   }
 }
 ```
-
-4. **Generate and apply migrations**
-
-   ```bash
-   pnpm db:generate
-   pnpm db:migrate OR pnpm db:push:remote
-   ```
-
-5. **Apply RLS and Postgres functions**
-   - Open the Supabase SQL Editor
-   - Apply RLS policies (rls.sql)
-   - Run `supabase/functions.sql`
-
-6. **Create first admin user**
-   SUPABASE_URL=https://xxx.supabase.co \
-   SUPABASE_SERVICE_ROLE_KEY=your-key \
-   ADMIN_EMAIL=you@example.com \
-   ADMIN_PASSWORD=yourpassword \
-   ADMIN_FIRST_NAME=Your \
-   ADMIN_LAST_NAME=Name \
-   pnpm seed:admin
 
 ## License
 

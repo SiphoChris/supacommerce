@@ -36,9 +36,22 @@ const adminCommerce = createClient(supabaseAdmin);
 
 ---
 
+## Prerequisites
+
+Before using the client, your Supabase project must have:
+
+1. Migrations applied (`supabase db push`)
+2. RLS policies applied (`rls.sql` pasted into the SQL editor)
+3. Postgres functions applied (`functions.sql` pasted into the SQL editor)
+4. At least one currency, region, and country configured (via the dashboard or SQL)
+
+---
+
 ## API Reference
 
 ### `commerce.cart`
+
+Carts are tied to a Supabase auth user. For guest/anonymous customers, use `supabase.auth.signInAnonymously()` first — the cart will be preserved when the user upgrades to a full account.
 
 ```typescript
 // Get or create the current customer's active cart
@@ -48,10 +61,11 @@ const cart = await commerce.cart.getOrCreate(regionId?, currencyCode?)
 const cart = await commerce.cart.get(cartId)
 
 // Add an item (increments quantity if variant already in cart)
+// unitPrice is optional — resolved from the variant's price set if omitted
 const cart = await commerce.cart.addItem(cartId, {
   variantId: "...",
   quantity: 1,
-  unitPrice: 2999,  // optional — fetched from variant if omitted
+  unitPrice: 2999,
 })
 
 // Update a line item quantity (set to 0 to remove)
@@ -64,7 +78,7 @@ const cart = await commerce.cart.removeItem(cartId, lineItemId)
 const cart = await commerce.cart.setShippingAddress(cartId, address)
 const cart = await commerce.cart.setBillingAddress(cartId, address)
 
-// Set email (required for checkout)
+// Set email (required before checkout)
 const cart = await commerce.cart.setEmail(cartId, "user@example.com")
 
 // Select a shipping method
@@ -75,11 +89,13 @@ const cart = await commerce.cart.applyPromotion(cartId, "SAVE10")
 const cart = await commerce.cart.removePromotion(cartId, "SAVE10")
 
 // Initiate checkout — calls the cart-checkout edge function
+// Payment provider is a placeholder — wire in your provider (e.g. Stripe) in
+// supabase/functions/cart-checkout/index.ts
 const result = await commerce.cart.checkout(cartId, {
-  paymentProvider: "stripe",
-  billingAddress: address,  // optional
+  paymentProvider: "manual",
+  billingAddress: address, // optional
 })
-// result.orderId — use to poll order status
+// result.orderId
 // result.paymentSession.data — pass to your provider's client SDK
 ```
 
@@ -90,10 +106,10 @@ const result = await commerce.cart.checkout(cartId, {
 const { data, count, hasMore } = await commerce.catalog.listProducts({
   limit: 20,
   offset: 0,
-  categoryId: "...",      // filter by category
-  collectionId: "...",    // filter by collection
-  salesChannelId: "...",  // filter by sales channel
-  search: "shirt",        // title search
+  categoryId: "...",
+  collectionId: "...",
+  salesChannelId: "...",
+  search: "shirt",
 })
 
 // Get a product by ID
@@ -105,12 +121,14 @@ const product = await commerce.catalog.getProductByHandle("blue-t-shirt")
 // Get a variant by ID
 const variant = await commerce.catalog.getVariant(variantId)
 
-// List categories (pass parentId to get children; null for root)
+// List categories (pass parentId to get children; omit for root)
 const categories = await commerce.catalog.listCategories(parentId?)
 
 // List collections
 const { data } = await commerce.catalog.listCollections({ limit: 10 })
 ```
+
+> **Note on thumbnails:** Thumbnails live on the `products` table, not on `product_variants`. The `addItem` cart method resolves the thumbnail from the parent product automatically.
 
 ### `commerce.orders`
 
@@ -124,7 +142,7 @@ const { data, count } = await commerce.orders.list({
 // Get a single order
 const order = await commerce.orders.get(orderId);
 
-// Get by human-readable display ID (order number)
+// Get by human-readable display ID (order number shown to customers)
 const order = await commerce.orders.getByDisplayId(1042);
 ```
 
@@ -167,10 +185,7 @@ const availability = await commerce.inventory.getAvailability(variantId);
 // availability.levels[].locationName, .quantityAvailable
 
 // Check multiple variants efficiently
-const map = await commerce.inventory.getBulkAvailability([
-  variantId1,
-  variantId2,
-]);
+const map = await commerce.inventory.getBulkAvailability([variantId1, variantId2]);
 const qty = map.get(variantId1); // number
 ```
 
@@ -182,11 +197,11 @@ const price = await commerce.pricing.getVariantPrice({
   variantId: "...",
   regionId: "...",
   currencyCode: "USD",
-  quantity: 2, // for tiered pricing
+  quantity: 2,
 });
-// price.amount (integer, smallest currency unit)
+// price.amount        — integer, smallest currency unit
 // price.currencyCode
-// price.priceListId (non-null if a sale price was applied)
+// price.priceListId   — non-null if a sale price was applied
 
 // Get prices for multiple variants at once
 const priceMap = await commerce.pricing.getBulkVariantPrices(
@@ -201,12 +216,12 @@ const priceMap = await commerce.pricing.getBulkVariantPrices(
 // Validate a code and calculate the discount
 const result = await commerce.promotions.validate({
   code: "SAVE10",
-  cartSubtotal: 5000, // integer, smallest currency unit
+  cartSubtotal: 5000,
   customerId: "...", // optional — checks per-customer usage limit
 });
-// result.valid — boolean
-// result.discountAmount — integer
-// result.reason — string explaining why invalid (if !valid)
+// result.valid
+// result.discountAmount
+// result.reason — why it's invalid (if !valid)
 
 // List automatic promotions (applied without a code)
 const promos = await commerce.promotions.listAutomatic();
@@ -248,9 +263,9 @@ const tax = await commerce.tax.calculate({
   provinceCode: "CA", // optional — matches province-specific rates
 });
 // tax.taxTotal — integer
-// tax.rate — decimal (0.0875 = 8.75%)
+// tax.rate     — decimal (0.0875 = 8.75%)
 
-// List all tax regions
+// List all tax regions for a country
 const taxRegions = await commerce.tax.listTaxRegions("US");
 ```
 
@@ -272,11 +287,7 @@ const me = await adminCommerce.admin.me();
 const { data } = await adminCommerce.admin.list();
 
 // Create, update, deactivate
-const admin = await adminCommerce.admin.create({
-  userId,
-  email,
-  role: "manager",
-});
+const admin = await adminCommerce.admin.create({ userId, email, role: "manager" });
 const admin = await adminCommerce.admin.update(adminId, { role: "admin" });
 await adminCommerce.admin.deactivate(adminId);
 ```
@@ -288,11 +299,7 @@ await adminCommerce.admin.deactivate(adminId);
 All methods throw typed errors from `@supacommerce/utils`:
 
 ```typescript
-import {
-  NotFoundError,
-  ValidationError,
-  ForbiddenError,
-} from "@supacommerce/utils";
+import { NotFoundError, ValidationError, ForbiddenError } from "@supacommerce/utils";
 
 try {
   const product = await commerce.catalog.getProduct(id);
@@ -314,7 +321,7 @@ import { formatCurrency } from "@supacommerce/utils";
 
 formatCurrency(2999, "USD"); // "$29.99"
 formatCurrency(2999, "GBP"); // "£29.99"
-formatCurrency(300, "JPY"); // "¥300"
+formatCurrency(300, "JPY");  // "¥300"
 ```
 
 ---

@@ -24,7 +24,6 @@ export type MenuGroup = {
 };
 
 export const MENU_GROUPS: MenuGroup[] = [
-  // ── Daily operations ────────────────────────────────────────────────────
   {
     key: "orders",
     label: "Orders",
@@ -57,13 +56,11 @@ export const MENU_GROUPS: MenuGroup[] = [
     resources: ["customers", "customer_groups"],
   },
   {
-    key: "inventory",
-    label: "Inventory",
-    Icon: Warehouse,
-    resources: ["inventory_items", "inventory_levels", "stock_locations"],
+    key: "payments",
+    label: "Payments",
+    Icon: CreditCard,
+    resources: ["payment_collections", "payment_sessions"],
   },
-
-  // ── Commerce config ─────────────────────────────────────────────────────
   {
     key: "pricing",
     label: "Pricing",
@@ -77,10 +74,10 @@ export const MENU_GROUPS: MenuGroup[] = [
     resources: ["promotions", "promotion_rules"],
   },
   {
-    key: "payments",
-    label: "Payments",
-    Icon: CreditCard,
-    resources: ["payment_collections", "payment_sessions"],
+    key: "inventory",
+    label: "Inventory",
+    Icon: Warehouse,
+    resources: ["inventory_items", "inventory_levels", "stock_locations"],
   },
   {
     key: "shipping",
@@ -93,18 +90,16 @@ export const MENU_GROUPS: MenuGroup[] = [
     ],
   },
   {
+    key: "regions",
+    label: "Regions & Geo",
+    Icon: Globe,
+    resources: ["regions", "countries", "currencies"],
+  },
+  {
     key: "sales_channels",
     label: "Sales Channels",
     Icon: Star,
     resources: ["sales_channels"],
-  },
-
-  // ── Store setup (currencies first, everything else depends on it) ────────
-  {
-    key: "regions",
-    label: "Regions & Geo",
-    Icon: Globe,
-    resources: ["currencies", "regions", "countries"],
   },
   {
     key: "tax",
@@ -112,8 +107,6 @@ export const MENU_GROUPS: MenuGroup[] = [
     Icon: Percent,
     resources: ["tax_regions", "tax_rates"],
   },
-
-  // ── System ───────────────────────────────────────────────────────────────
   {
     key: "admin",
     label: "Admin",

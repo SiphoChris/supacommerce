@@ -15,10 +15,10 @@ import { RecentOrdersTable } from "./RecentOrdersTable";
 
 const QUICK_LINKS = [
   {
-    label: "New Order",
-    to: "/orders/create",
+    label: "Orders",
+    to: "/orders",
     Icon: ShoppingCart,
-    description: "Create a manual order",
+    description: "View and manage orders",
   },
   {
     label: "Add Product",
@@ -71,7 +71,7 @@ export function Dashboard() {
           Dashboard
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Welcome back. Here's what's going on.
+          Welcome back. Here&apo;s what&apos;s going on.
         </Typography>
       </Box>
 
