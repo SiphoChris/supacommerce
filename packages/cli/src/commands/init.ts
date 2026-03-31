@@ -244,6 +244,13 @@ export async function initCommand(options: InitOptions): Promise<void> {
       dest: path.join(projectDir, "drizzle.config.example.ts"),
       description: "Drizzle config example (rename to drizzle.config.ts)",
     },
+
+    // .env.example
+    {
+      src: path.join(TEMPLATES_DIR, "env.example"),
+      dest: path.join(projectDir, ".env.example"),
+      description: "Example environment variables file (rename to .env)",
+    },
   ];
 
   // ── 5. Validate all source files exist ────────────────────────────────────
