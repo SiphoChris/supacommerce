@@ -28,6 +28,9 @@ const withMDX = createMDX();
 const config = {
   serverExternalPackages: ['@takumi-rs/image-response'],
   reactStrictMode: true,
+  outputFileTracingExcludes: {
+    '*': ['../dashboard/**', '../storefront/**'],
+  },
   async rewrites() {
     return [
       {
