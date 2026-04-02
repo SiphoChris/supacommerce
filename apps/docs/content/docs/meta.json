@@ -1,0 +1,16 @@
+{
+  "title": "supacommerce",
+  "pages": [
+    "index",
+    "getting-started",
+    "environment-variables",
+    "cli",
+    "schema",
+    "rls",
+    "edge-functions",
+    "rpc-functions",
+    "client",
+    "utils",
+    "examples"
+  ]
+}

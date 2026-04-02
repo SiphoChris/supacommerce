@@ -1,13 +1,106 @@
 ---
-title: Hello World
-description: Your first document
+title: Introduction
+description: Ecommerce building blocks for Supabase. Not a platform. Not a hosted service.
 ---
 
-Welcome to the docs! You can start writing documents in `/content/docs`.
+# supacommerce
 
-## What is Next?
+Ecommerce building blocks for Supabase. Not a platform. Not a hosted service. A set of production-grade files that get dropped into your project and become yours.
 
-<Cards>
-  <Card title="Learn more about Next.js" href="https://nextjs.org/docs" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
-</Cards>
+The closest analogy is [shadcn/ui](https://ui.shadcn.com) — but for your backend instead of your UI.
+
+## What it is
+
+One command gives you a complete ecommerce backend:
+
+```bash
+npx @supacommerce/cli init
+```
+
+You get 14 Drizzle schema files, 7 Supabase edge functions, RLS policies, Postgres RPC functions, and a typed query client. Every file lands in your repo and becomes yours. Read it. Modify it. Delete what you don't need.
+
+## Packages
+
+| Package | Description |
+| --- | --- |
+| `@supacommerce/cli` | The `init` command — copies schemas, edge functions, and SQL files into your project |
+| `@supacommerce/client` | Typed ecommerce query client — `commerce.cart.addItem()`, `commerce.catalog.listProducts()`, etc. |
+| `@supacommerce/utils` | Shared utilities — currency helpers, error types, `Result<T>`, pagination |
+
+## What gets copied
+
+Running `npx @supacommerce/cli init` copies the following into your project:
+
+```
+your-project/
+├── .env.example
+├── drizzle.config.example.ts
+└── supabase/
+    ├── config.toml
+    ├── rls.sql
+    ├── functions.sql
+    ├── nuke-dbs.sql
+    ├── drop-dbs.sql
+    └── functions/
+        ├── deno.json
+        ├── _shared/
+        │   ├── cors.ts
+        │   └── supabaseAdmin.ts
+        ├── cart-checkout/
+        ├── order-confirmed/
+        ├── payment-webhook/
+        ├── admin-send-invite/
+        ├── admin-accept-invite/
+        ├── storage-upload/
+        └── storage-delete/
+└── src/
+    └── ecommerce/
+        └── schema/
+            ├── currencies.ts
+            ├── regions.ts
+            ├── customers.ts
+            ├── catalog.ts
+            ├── inventory.ts
+            ├── pricing.ts
+            ├── promotions.ts
+            ├── tax.ts
+            ├── fulfillment.ts
+            ├── cart.ts
+            ├── orders.ts
+            ├── payments.ts
+            ├── sales_channels.ts
+            └── admin_users.ts
+```
+
+## Philosophy
+
+**You own everything.** supacommerce makes no attempt to abstract Drizzle, Supabase, or the database from you. The schemas are Drizzle schemas. The migrations are SQL. The edge functions are TypeScript.
+
+This means you can read every line of code running in your system, modify anything without fighting an abstraction layer, and you are not locked in — delete `@supacommerce/client` and nothing breaks except your convenience wrappers.
+
+The tradeoff: when supacommerce releases schema improvements, they don't automatically apply to your project. You read the changelog and apply relevant changes manually, the same as any schema change in your own codebase.
+
+## Schema coverage
+
+| Domain | Tables |
+| --- | --- |
+| Currencies | `currencies` |
+| Regions | `regions`, `countries` |
+| Customers | `customers`, `customer_groups`, `customer_addresses` |
+| Catalog | `products`, `product_variants`, `product_options`, `product_option_values`, `product_variant_option_values`, `product_categories`, `product_collections`, `product_tags`, `product_images` |
+| Inventory | `stock_locations`, `inventory_items`, `inventory_levels`, `inventory_reservations` |
+| Pricing | `price_sets`, `prices`, `price_lists`, `price_list_prices`, `price_list_customer_groups` |
+| Promotions | `promotions`, `promotion_rules`, `promotion_usages` |
+| Tax | `tax_regions`, `tax_rates`, `tax_rate_product_categories` |
+| Fulfillment | `shipping_profiles`, `fulfillment_providers`, `shipping_options`, `shipping_option_requirements` |
+| Cart | `carts`, `cart_line_items`, `cart_shipping_methods` |
+| Orders | `orders`, `order_line_items`, `order_fulfillments`, `order_fulfillment_items`, `order_returns`, `order_return_items`, `order_refunds` |
+| Payments | `payment_collections`, `payment_sessions` |
+| Sales Channels | `sales_channels`, `sales_channel_products` |
+| Admin | `admin_users`, `admin_invitations` |
+
+## Requirements
+
+- Node.js >= 18.0.0
+- pnpm >= 9.0.0
+- A Supabase project

@@ -1,0 +1,130 @@
+---
+title: CLI
+description: Reference for the @supacommerce/cli init command.
+---
+
+# CLI
+
+`@supacommerce/cli` is the init command for supacommerce. It copies schemas, edge functions, SQL files, and config into your project.
+
+## Usage
+
+```bash
+npx @supacommerce/cli init
+```
+
+Options:
+
+```bash
+npx @supacommerce/cli init --dir ./my-project     # target a specific directory
+npx @supacommerce/cli init --skip-confirmation    # skip the confirmation prompt
+```
+
+## What it copies
+
+```
+your-project/
+├── .env.example
+├── drizzle.config.example.ts
+└── supabase/
+    ├── config.toml
+    ├── rls.sql
+    ├── functions.sql
+    ├── nuke-dbs.sql
+    ├── drop-dbs.sql
+    └── functions/
+        ├── deno.json
+        ├── _shared/
+        │   ├── cors.ts
+        │   └── supabaseAdmin.ts
+        ├── cart-checkout/index.ts
+        ├── order-confirmed/index.ts
+        ├── payment-webhook/index.ts
+        ├── admin-send-invite/index.ts
+        ├── admin-accept-invite/index.ts
+        ├── storage-upload/index.ts
+        └── storage-delete/index.ts
+└── src/
+    └── ecommerce/
+        └── schema/
+            ├── currencies.ts
+            ├── regions.ts
+            ├── customers.ts
+            ├── catalog.ts
+            ├── inventory.ts
+            ├── pricing.ts
+            ├── promotions.ts
+            ├── tax.ts
+            ├── fulfillment.ts
+            ├── cart.ts
+            ├── orders.ts
+            ├── payments.ts
+            ├── sales_channels.ts
+            └── admin_users.ts
+```
+
+## How the CLI handles your project
+
+**Existing `src/` directory** — schemas are placed at `src/ecommerce/schema/` without touching your existing code.
+
+**Files that already exist** — shown as `overwrite` in the preview table with a warning before writing anything.
+
+**Non-existent target directory** — prompts to create it.
+
+**Missing template files** — fails fast with a clear error before writing anything. Nothing is written unless all source files are present.
+
+**Failed writes** — reports which files failed. Successfully written files remain.
+
+**Package manager detection** — automatically detects pnpm, yarn, bun, or npm from your lockfiles and prints the correct install commands.
+
+## SQL utility scripts
+
+Two SQL scripts are included for development use. Run either in the Supabase SQL Editor.
+
+### nuke-dbs.sql
+
+Truncates all tables in dependency order, preserving your schema and RLS policies. Use this to clear all data without dropping anything — useful when you want a fresh dataset but don't want to re-run migrations.
+
+```sql
+truncate table public.orders, public.carts, public.products, ... restart identity cascade;
+```
+
+### drop-dbs.sql
+
+Drops all tables and enums entirely. Use this when you need a completely clean slate — for example, after making breaking schema changes that require a fresh migration.
+
+```sql
+-- Drops all tables and enums in public schema
+do $$ declare r record; begin ... end $$;
+```
+
+After running `drop-dbs.sql`, re-run your migrations and re-apply `rls.sql` and `functions.sql`.
+
+## config.toml
+
+The `config.toml` file copied to `supabase/config.toml` disables JWT verification for the storage functions:
+
+```toml
+[functions.storage-upload]
+verify_jwt = false
+
+[functions.storage-delete]
+verify_jwt = false
+```
+
+This is intentional — these functions perform their own admin authentication check by verifying the caller is present in the `admin_users` table. Disabling Supabase's built-in JWT check allows the functions to handle auth themselves and return proper error responses instead of a generic 401.
+
+## deno.json
+
+The `deno.json` import map is copied to `supabase/functions/deno.json`. It enables absolute imports across edge functions so shared utilities can be imported without relative path gymnastics.
+
+## After running init
+
+1. Install dependencies
+2. Configure Drizzle and add `DATABASE_URL` to `.env`
+3. Generate and apply migrations
+4. Apply `rls.sql` and `functions.sql` in the Supabase SQL Editor
+5. Set edge function secrets via `supabase secrets set`
+6. Create first admin user via `pnpm seed:admin`
+
+See [Getting Started](/docs/getting-started) for the full walkthrough.

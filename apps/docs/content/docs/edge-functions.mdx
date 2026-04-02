@@ -1,0 +1,287 @@
+---
+title: Edge Functions
+description: The 7 Supabase edge functions included with supacommerce.
+---
+
+# Edge Functions
+
+supacommerce includes 7 Supabase edge functions at `supabase/functions/`. All functions use the service role key via `_shared/supabaseAdmin.ts` which bypasses RLS — they are trusted server-side code.
+
+Two shared utilities live in `_shared/`:
+
+- **`cors.ts`** — CORS helpers, `jsonResponse()`, and `errorResponse()`
+- **`supabaseAdmin.ts`** — the service role Supabase client
+
+## cart-checkout
+
+**`supabase/functions/cart-checkout/index.ts`**
+
+The checkout entry point. Called by `commerce.cart.checkout(cartId, options)`.
+
+### Flow
+
+1. Load and validate the cart — must be `active` and have an email and shipping address
+2. Reserve inventory atomically for each line item via `reserve_inventory` RPC — if any reservation fails, all previous reservations are released and checkout aborts
+3. Calculate shipping total from `cart_shipping_methods`
+4. Calculate tax from `tax_regions` / `tax_rates` matched by shipping address country and province
+5. Apply promotions — first valid manual code wins, automatic promotions apply if no manual code matched
+6. Create the order via `checkout_cart` RPC — atomic transaction
+7. **TODO: create payment session with your provider** — wire in Stripe or your chosen provider here
+8. Record the payment session and return `orderId` + `paymentSession` to the client
+
+### Payment provider integration
+
+Step 7 is where you wire in your payment provider. The function includes a Stripe example in the comments:
+
+```typescript
+// supabase/functions/cart-checkout/index.ts — step 6
+
+// TODO: integrate your payment provider here.
+//
+// Stripe example:
+//   import Stripe from "https://esm.sh/stripe@14?target=deno"
+//   const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!)
+//   const total = subtotal + taxTotal + shippingTotal - discountTotal
+//   const paymentIntent = await stripe.paymentIntents.create({
+//     amount: total,
+//     currency: cart.currency_code.toLowerCase(),
+//     metadata: { cartId, orderId },
+//   })
+//   providerSessionId = paymentIntent.id
+//   paymentSessionData = { clientSecret: paymentIntent.client_secret }
+```
+
+After wiring in your provider, set the required secrets:
+
+```bash
+supabase secrets set STRIPE_SECRET_KEY=sk_live_...
+```
+
+### Promotion logic
+
+The promotion engine in `cart-checkout` supports:
+
+| Type | Behaviour |
+| --- | --- |
+| `percentage` | Reduces subtotal by a percentage, e.g. `value: 15` = 15% off |
+| `fixed_amount` | Reduces subtotal by a fixed amount in cents |
+| `free_shipping` | Zeroes the shipping total |
+| `buy_x_get_y` | Not yet implemented |
+
+Rules checked in order: validity window → global usage limit → per-customer usage limit → promotion rules (`cart_total` minimum, `customer_group` membership).
+
+### Request / response
+
+```typescript
+// Request body
+{ cartId: string, paymentProvider: string, billingAddress?: object }
+
+// Response
+{
+  orderId: string,
+  paymentSession: { id: string, provider: string, data: object }
+}
+```
+
+---
+
+## order-confirmed
+
+**`supabase/functions/order-confirmed/index.ts`**
+
+Called by `payment-webhook` after payment is successfully captured. Two responsibilities:
+
+1. Confirm the order atomically via `confirm_order` RPC — updates order status to `processing`, marks payment as `captured`, and upgrades pending inventory reservations to `confirmed`
+2. Send an order confirmation email to the customer via Resend
+
+Email sending is non-fatal — if the email fails, the order is still confirmed and `{ success: true, emailSent: false }` is returned.
+
+### Required secrets
+
+```bash
+supabase secrets set RESEND_API_KEY=re_... EMAIL_FROM="orders@yourdomain.com"
+```
+
+### Request / response
+
+```typescript
+// Request body
+{ orderId: string, paymentSessionId: string }
+
+// Response
+{ success: true, emailSent: boolean }
+```
+
+### Email template
+
+The function includes a working HTML email template. It renders order details, line items, totals, and shipping address. Replace or extend it with your own template engine (MJML, React Email, etc.) — the file is yours.
+
+---
+
+## payment-webhook
+
+**`supabase/functions/payment-webhook/index.ts`**
+
+Receives webhook events from your payment provider and calls `order-confirmed` on successful payment.
+
+Register the function URL with your provider:
+
+```
+https://<project-ref>.supabase.co/functions/v1/payment-webhook
+```
+
+### Signature verification
+
+The function currently requires `ENVIRONMENT=development` to process events — without signature verification implemented, it returns a 500 in any other environment. This is intentional.
+
+When you wire in your provider, replace the development bypass with real signature verification:
+
+```typescript
+// payment-webhook/index.ts — step 1
+
+// TODO: uncomment and implement signature verification for your provider.
+//
+// Stripe example:
+//   import Stripe from "https://esm.sh/stripe@14?target=deno"
+//   const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!)
+//   let event: Stripe.Event
+//   try {
+//     event = await stripe.webhooks.constructEventAsync(
+//       body,
+//       signature,
+//       Deno.env.get("STRIPE_WEBHOOK_SECRET")!
+//     )
+//   } catch (err) {
+//     return errorResponse("Invalid signature", 400)
+//   }
+```
+
+### Handled events
+
+| Event | Behaviour |
+| --- | --- |
+| `payment_intent.succeeded` | Calls `order-confirmed` to confirm the order and send email |
+| `payment_intent.payment_failed` | Releases inventory reservations, cancels the order |
+
+### Required secrets
+
+```bash
+supabase secrets set ENVIRONMENT=development
+# When implementing signature verification:
+supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+---
+
+## admin-send-invite
+
+**`supabase/functions/admin-send-invite/index.ts`**
+
+Sends an admin invitation email via Resend. Called by the dashboard when an admin creates a new invitation.
+
+The function loads the invitation record, builds an accept URL pointing to your dashboard, renders an HTML email, and sends it via Resend.
+
+### Required secrets
+
+```bash
+supabase secrets set \
+  RESEND_API_KEY=re_... \
+  RESEND_FROM="Your Store <noreply@yourdomain.com>" \
+  DASHBOARD_URL="https://your-dashboard-url.com"
+```
+
+### Request / response
+
+```typescript
+// Request body
+{ invitationId: string }
+
+// Response
+{ success: true, email: string }
+```
+
+---
+
+## admin-accept-invite
+
+**`supabase/functions/admin-accept-invite/index.ts`**
+
+Handles invitation redemption. Called by the accept invite page in the dashboard when a new admin submits the form.
+
+### Flow
+
+1. Validate inputs — token, first name, last name, password (min 8 characters)
+2. Look up the invitation by token — must be unexpired and not already accepted
+3. Create the Supabase auth user with `email_confirm: true` — skips confirmation email entirely
+4. Insert a row into `admin_users`
+5. Stamp `accepted_at` on the invitation
+
+If step 4 fails, the auth user created in step 3 is deleted to prevent orphaned auth accounts.
+
+### Request / response
+
+```typescript
+// Request body
+{ token: string, firstName: string, lastName: string, password: string }
+
+// Response
+{ success: true, email: string, role: string }
+```
+
+---
+
+## storage-upload
+
+**`supabase/functions/storage-upload/index.ts`**
+
+Uploads a file to Supabase Storage and returns the public URL. Used by the dashboard for product images and thumbnails.
+
+JWT verification is disabled for this function in `config.toml` — the function performs its own admin authentication check by verifying the caller is in `admin_users`.
+
+### Buckets
+
+Create these in your Supabase project under **Storage → New bucket** before using the dashboard:
+
+| Bucket | Public | Used for |
+| --- | --- | --- |
+| `products` | Yes | Product thumbnails and images |
+| `avatars` | Yes | Admin user avatars |
+
+### Request
+
+Multipart form data:
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `file` | Yes | The file to upload — must be `image/jpeg`, `image/png`, `image/webp`, `image/gif`, or `image/svg+xml` |
+| `bucket` | Yes | Target bucket name |
+| `path` | No | Folder prefix, e.g. `thumbnails` or `images` |
+
+### Response
+
+```typescript
+{ url: string } // public URL of the uploaded file
+```
+
+---
+
+## storage-delete
+
+**`supabase/functions/storage-delete/index.ts`**
+
+Deletes one or more files from Supabase Storage. Used by the dashboard when deleting product images.
+
+JWT verification is disabled — same admin auth check as `storage-upload`.
+
+### Request
+
+```typescript
+// POST application/json
+{ bucket: string, paths: string[] }
+```
+
+### Response
+
+```typescript
+{ deleted: string[] }
+```

@@ -1,0 +1,178 @@
+---
+title: Getting Started
+description: Get a complete ecommerce backend running in your Supabase project.
+---
+
+# Getting Started
+
+This guide walks you through setting up supacommerce from scratch — from running the CLI to making your first query.
+
+## Prerequisites
+
+- Node.js >= 18.0.0
+- A Supabase project ([create one here](https://supabase.com))
+- [Supabase CLI](https://supabase.com/docs/guides/cli) installed
+- pnpm, yarn, bun, or npm
+
+## 1. Run the CLI
+
+Run the init command in the root of your project:
+
+```bash
+npx @supacommerce/cli init
+```
+
+The CLI will show you every file it's about to write and ask for confirmation before writing anything. It detects your package manager automatically and prints the correct install commands for your setup.
+
+Options:
+
+```bash
+npx @supacommerce/cli init --dir ./my-project     # target a specific directory
+npx @supacommerce/cli init --skip-confirmation    # skip the confirmation prompt
+```
+
+## 2. Install dependencies
+
+```bash
+pnpm add drizzle-orm @supabase/supabase-js @supacommerce/client
+pnpm add -D drizzle-kit
+```
+
+## 3. Configure Drizzle
+
+Rename the example config and add your database URL:
+
+```bash
+mv drizzle.config.example.ts drizzle.config.ts
+```
+
+Add to your `.env`:
+
+```bash
+DATABASE_URL="postgresql://postgres:[password]@[host]:5432/postgres"
+```
+
+Your `DATABASE_URL` is in your Supabase project under **Settings → Database → Connection string → URI**.
+
+## 4. Recommended package.json scripts
+
+Add these to your `package.json` before generating migrations:
+
+```json
+{
+  "scripts": {
+    "drizzle:generate": "drizzle-kit generate",
+    "drizzle:migrate": "drizzle-kit migrate",
+    "drizzle:push": "drizzle-kit push"
+  }
+}
+```
+
+## 5. Generate and apply migrations
+
+```bash
+pnpm drizzle:generate
+supabase db push
+```
+
+This generates SQL from your Drizzle schemas and pushes it to your Supabase project.
+
+## 6. Apply RLS policies and Postgres functions
+
+Open the [Supabase SQL Editor](https://supabase.com/dashboard) and run these two files in order:
+
+1. `supabase/rls.sql` — Row Level Security policies
+2. `supabase/functions.sql` — Postgres RPC functions
+
+These are **not** applied by `supabase db push` — they must be run manually. Both files are fully idempotent and safe to re-run.
+
+## 7. Set edge function secrets
+
+The edge functions need these secrets set in your Supabase project:
+
+```bash
+supabase secrets set \
+  RESEND_API_KEY=re_... \
+  RESEND_FROM="Your Store <orders@yourdomain.com>" \
+  EMAIL_FROM="orders@yourdomain.com" \
+  DASHBOARD_URL="https://your-dashboard-url.com" \
+  ENVIRONMENT="development"
+```
+
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_ANON_KEY` are auto-injected by Supabase — you don't set these manually.
+
+## 8. Configure store fundamentals
+
+Before creating products or pricing, set these up in order — each one depends on the previous due to FK constraints:
+
+1. **Currencies** — e.g. `USD`, `ZAR`. The `code` field is the primary key.
+2. **Regions** — each region references a currency
+3. **Countries** — each country belongs to a region
+4. **Tax regions and rates** — optional, reference regions
+
+## 9. Create your first admin user
+
+Run the seed script to create the first admin user:
+
+```bash
+pnpm seed:admin
+```
+
+This requires these vars in your `.env`:
+
+```bash
+VITE_SUPABASE_URL="your_supabase_project_url"
+VITE_SUPABASE_SERVICE_ROLE_KEY="your_supabase_service_role_key"
+VITE_ADMIN_EMAIL="admin@yourdomain.com"
+VITE_ADMIN_PASSWORD="your_secure_password"
+VITE_ADMIN_FIRST_NAME="First"
+VITE_ADMIN_LAST_NAME="Last"
+```
+
+Additional admins are onboarded via the invitation system in the dashboard — not via the seed script.
+
+## 10. Use the query client
+
+```typescript
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supacommerce/client";
+
+const supabase = createSupabaseClient(
+  process.env.VITE_SUPABASE_URL!,
+  process.env.VITE_SUPABASE_ANON_KEY!,
+);
+
+export const commerce = createClient(supabase);
+
+// List products
+const { data, count } = await commerce.catalog.listProducts({ limit: 20 });
+
+// Get or create a cart
+const cart = await commerce.cart.getOrCreate();
+
+// Add an item
+await commerce.cart.addItem(cart.id, { variantId: "...", quantity: 1 });
+```
+
+## Anonymous / guest carts
+
+Carts require a Supabase auth user. For unauthenticated customers, use anonymous auth:
+
+```typescript
+await supabase.auth.signInAnonymously();
+// Cart persists across sessions.
+// When the user creates a full account, Supabase upgrades the anonymous
+// user automatically and the cart is preserved.
+```
+
+RLS works identically for anonymous and authenticated users — no special handling needed.
+
+## Resetting your database
+
+Two SQL utility scripts are included for development:
+
+**`supabase/nuke-dbs.sql`** — truncates all tables, preserving schema and policies. Use this to clear all data without dropping anything.
+
+**`supabase/drop-dbs.sql`** — drops all tables and enums entirely. Use this when you need a completely clean slate before re-running migrations.
+
+Run either file in the Supabase SQL Editor.

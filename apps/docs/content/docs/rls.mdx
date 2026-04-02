@@ -1,0 +1,111 @@
+---
+title: Row Level Security
+description: RLS policies applied to your Supabase project by supacommerce.
+---
+
+# Row Level Security
+
+`supabase/rls.sql` contains all RLS policies for the supacommerce schema. The file is fully idempotent — it drops all existing supacommerce policies before recreating them, so it's safe to re-run at any time.
+
+Apply it by pasting the contents into the Supabase SQL Editor.
+
+## Helper functions
+
+The policies rely on two Postgres helper functions defined at the top of `rls.sql`:
+
+**`public.is_admin()`** — returns `true` if the current user has a record in `admin_users` with `is_active = true`. Used to gate all admin write operations.
+
+**`public.current_customer_id()`** — returns the `id` from the `customers` table for the current `auth.uid()`. Used to scope cart and order access to the owning customer.
+
+## Policy overview
+
+### Catalog — public read, admin write
+
+Products and all related catalog tables are publicly readable without authentication. This means your storefront can list products without requiring a logged-in user.
+
+| Table | Public read | Admin write |
+| --- | --- | --- |
+| `products` | `deleted_at is null` | ✓ |
+| `product_variants` | `deleted_at is null` | ✓ |
+| `product_categories` | `is_active = true` | ✓ |
+| `product_collections` | `deleted_at is null` | ✓ |
+| `product_tags` | ✓ | ✓ |
+| `product_images` | ✓ | ✓ |
+| `product_options` | ✓ | ✓ |
+| `product_option_values` | ✓ | ✓ |
+| `product_variant_option_values` | ✓ | ✓ |
+
+### Inventory — authenticated read, admin write
+
+Inventory data requires authentication to read. This prevents unauthenticated users from scraping stock levels.
+
+| Table | Read | Write |
+| --- | --- | --- |
+| `stock_locations` | `is_active = true` or admin | Admin only |
+| `inventory_items` | Authenticated or admin | Admin only |
+| `inventory_levels` | Authenticated or admin | Admin only |
+| `inventory_reservations` | Admin only | Admin only |
+
+### Pricing — public read, admin write
+
+All pricing tables are publicly readable. Price lists are only readable when `status = 'active'` and `deleted_at is null` (or for admins).
+
+### Promotions — authenticated read, admin write
+
+Active promotions require authentication to read — `status = 'active'` and `deleted_at is null`. Promotion usages are scoped to the owning customer.
+
+### Tax — public read, admin write
+
+Tax regions and rates are publicly readable so the storefront can display tax information before checkout.
+
+### Fulfillment — public read, admin write
+
+Shipping options are readable when `is_active = true` and `deleted_at is null`. Fulfillment providers are readable when `is_installed = true`.
+
+### Carts — own data only
+
+Customers can only read and write their own active carts. The policies check `customer_id = current_customer_id()` on every operation.
+
+Cart line items and shipping methods additionally check that the parent cart is `active` on insert and update — preventing modifications to completed carts.
+
+Edge functions use the service role key which bypasses RLS entirely — this is how `cart-checkout` can complete a cart atomically.
+
+### Orders — own data only, read-only for customers
+
+Orders are created by edge functions using the service role key. Customers can only read their own orders — there are no customer-facing insert or update policies on orders.
+
+All order sub-tables (`order_line_items`, `order_fulfillments`, `order_returns`, `order_refunds`, etc.) are scoped by joining back to the parent order and checking `customer_id`.
+
+### Payments — own data only, read-only for customers
+
+Payment collections and sessions are scoped by joining back to the parent order.
+
+### Sales channels — public read, admin write
+
+Sales channels are readable when `is_disabled = false` and `deleted_at is null`.
+
+### Admin users — invitation-based
+
+| Policy | Description |
+| --- | --- |
+| `admin_users_select_self` | Admins can only select their own row — prevents RLS recursion deadlock in `is_admin()` |
+| `admin_users_admin_write` | Full write access for existing admins |
+| `admin_users_insert_via_invitation` | Allows insert only if a valid unexpired invitation exists for the user's email |
+
+### Admin invitations
+
+| Policy | Description |
+| --- | --- |
+| `admin_invitations_admin_only` | Full access for admins |
+| `admin_invitations_anon_token_lookup` | Anonymous users can read unexpired invitations — needed for the accept invite page to load the invitation details before the user is logged in |
+| `admin_invitations_accept_own` | Authenticated users can update their own invitation to mark it as accepted |
+
+## Anonymous auth
+
+RLS policies work identically for anonymous users created via `supabase.auth.signInAnonymously()` and fully authenticated users. An anonymous user has a real `auth.uid()` and a real `customers` row, so cart and order policies apply correctly.
+
+## Modifying policies
+
+Since you own `rls.sql`, you can modify any policy to fit your use case. Common modifications include making inventory publicly readable, restricting product visibility by sales channel, or adding team-based access to admin resources.
+
+After modifying, re-run the file in the SQL Editor. Because it drops all policies before recreating them, you won't end up with duplicate or conflicting policies.

@@ -1,0 +1,394 @@
+---
+title: Schema
+description: All 14 Drizzle schema files copied into your project by the CLI.
+---
+
+# Schema
+
+supacommerce gives you 14 Drizzle ORM schema files covering the full ecommerce domain. Every file is plain TypeScript — read it, modify it, delete what you don't need.
+
+All schemas live at `src/ecommerce/schema/` after running `npx @supacommerce/cli init`.
+
+## currencies
+
+**File:** `currencies.ts`
+
+The foundation of your store. Everything else references a currency code. Set this up first.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `code` | `varchar(3)` | **Primary key** — ISO 4217 code, e.g. `USD`, `ZAR`, `GBP` |
+| `name` | `varchar(100)` | Human-readable name, e.g. `US Dollar` |
+| `symbol` | `varchar(10)` | Display symbol, e.g. `$`, `£` |
+| `includes_decimal` | `boolean` | `false` for zero-decimal currencies like JPY, KRW |
+
+Note: the primary key is `code`, not a UUID. This affects how you configure the react-admin dataProvider — see [Examples](/docs/examples).
+
+## regions
+
+**File:** `regions.ts`
+
+A region groups countries under a common currency. This is the primary way to support multi-currency storefronts.
+
+### regions
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | Primary key |
+| `name` | `varchar(255)` | e.g. `North America`, `Europe` |
+| `currency_code` | `varchar(3)` | FK → `currencies.code` |
+| `tax_rate` | `varchar(10)` | Display-only legacy field. Use `tax_regions`/`tax_rates` for actual tax calculation. |
+| `tax_included` | `boolean` | Whether prices are tax-inclusive (e.g. VAT in EU) |
+| `is_active` | `boolean` | |
+
+### countries
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | Primary key |
+| `region_id` | `uuid` | FK → `regions.id` CASCADE |
+| `iso2` | `varchar(2)` | ISO 3166-1 alpha-2, e.g. `US`, `GB` — unique |
+| `iso3` | `varchar(3)` | ISO 3166-1 alpha-3, e.g. `USA`, `GBR` |
+| `name` | `varchar(100)` | |
+| `display_name` | `varchar(100)` | |
+
+## customers
+
+**File:** `customers.ts`
+
+### customers
+
+Linked to a Supabase auth user via `user_id`.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | Primary key |
+| `user_id` | `uuid` | FK → `auth.users.id` — unique |
+| `email` | `varchar(255)` | Unique |
+| `first_name` | `varchar(100)` | |
+| `last_name` | `varchar(100)` | |
+| `phone` | `varchar(30)` | |
+| `group_id` | `uuid` | FK → `customer_groups.id` — optional |
+| `metadata` | `jsonb` | |
+
+### customer_groups
+
+Used for price list targeting and promotion rules.
+
+### customer_addresses
+
+Saved addresses for a customer. `is_default` marks the primary address.
+
+## catalog
+
+**File:** `catalog.ts`
+
+The largest schema. Products, variants, options, categories, collections, tags, and images.
+
+### products
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | Primary key |
+| `title` | `varchar(255)` | |
+| `handle` | `varchar(255)` | URL slug — unique, indexed |
+| `status` | `product_status` | `draft`, `published`, `archived` |
+| `thumbnail` | `text` | URL — lives on the product, not on variants |
+| `discountable` | `boolean` | Whether promotions apply to this product |
+| `metadata` | `jsonb` | |
+
+### product_variants
+
+A specific purchasable combination — e.g. `Blue / Large`.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | Primary key |
+| `product_id` | `uuid` | FK → `products.id` CASCADE |
+| `title` | `varchar(255)` | |
+| `sku` | `varchar(100)` | Unique |
+| `weight` | `integer` | Grams |
+| `length` / `height` / `width` | `integer` | Centimetres |
+| `allow_backorder` | `boolean` | |
+| `manage_inventory` | `boolean` | |
+| `rank` | `integer` | Display order |
+
+Prices are **not** stored on variants — they live in the pricing schema and are resolved per-region via `price_sets`.
+
+Thumbnails are **not** stored on variants — they live on the parent `products` record.
+
+### product_options / product_option_values
+
+Option types (e.g. `Size`, `Color`) and their values (e.g. `Small`, `Red`).
+
+### product_variant_option_values
+
+Junction table linking variants to their option values.
+
+### product_categories
+
+Hierarchical categories via self-referencing `parent_id`. e.g. `Clothing > Mens > Jackets`.
+
+### product_collections
+
+Flat curated groupings — `Summer Drop`, `Best Sellers`, etc.
+
+### product_tags
+
+Free-form tags. Many-to-many with products via `product_tag_products`.
+
+### product_images
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | Primary key |
+| `product_id` | `uuid` | FK → `products.id` CASCADE |
+| `url` | `text` | Public URL from Supabase Storage |
+| `alt` | `varchar(255)` | |
+| `rank` | `integer` | Display order |
+
+## inventory
+
+**File:** `inventory.ts`
+
+### stock_locations
+
+Physical or virtual locations where inventory is held.
+
+### inventory_items
+
+One inventory item per variant. Tracks whether inventory is managed for that variant.
+
+### inventory_levels
+
+Stock quantities per location. `quantity_available` is decremented when reservations are created.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `inventory_item_id` | `uuid` | FK → `inventory_items.id` |
+| `location_id` | `uuid` | FK → `stock_locations.id` |
+| `stocked_quantity` | `integer` | Total stock |
+| `reserved_quantity` | `integer` | Held by pending reservations |
+| `quantity_available` | `integer` | `stocked - reserved` |
+
+### inventory_reservations
+
+Soft holds created by `cart-checkout` before payment is captured. Released on payment failure, confirmed on payment success.
+
+| Status | Description |
+| --- | --- |
+| `pending` | Created at checkout, awaiting payment |
+| `confirmed` | Payment captured — stock permanently decremented |
+| `released` | Payment failed — stock restored |
+
+## pricing
+
+**File:** `pricing.ts`
+
+### price_sets
+
+One price set per variant. A price set is a container for all the prices of a variant across currencies and regions.
+
+### prices
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `price_set_id` | `uuid` | FK → `price_sets.id` CASCADE |
+| `currency_code` | `varchar(3)` | FK → `currencies.code` |
+| `region_id` | `uuid` | FK → `regions.id` — optional |
+| `amount` | `integer` | Integer in smallest currency unit |
+| `min_quantity` | `integer` | For volume/tiered pricing |
+| `max_quantity` | `integer` | For volume/tiered pricing |
+
+Price resolution priority: `region + currency` → `region only` → `currency only`.
+
+### price_lists
+
+Overriding prices for a specific context — a sale event, a VIP customer group, a B2B contract.
+
+| Type | Behaviour |
+| --- | --- |
+| `sale` | Applied on top of regular prices |
+| `override` | Completely replaces regular prices |
+
+### price_list_prices
+
+The actual override prices within a price list. Linked directly to variants.
+
+### price_list_customer_groups
+
+Restricts a price list to specific customer groups. If no groups are linked, the price list applies to all customers.
+
+## promotions
+
+**File:** `promotions.ts`
+
+### promotions
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `code` | `varchar(100)` | Promotion code — null for automatic promotions |
+| `type` | `promotion_type` | `percentage`, `fixed_amount`, `free_shipping`, `buy_x_get_y` |
+| `value` | `integer` | Percent (e.g. `15`) or amount in cents |
+| `is_automatic` | `boolean` | Applied automatically without a code |
+| `is_case_insensitive` | `boolean` | Whether code matching is case-insensitive |
+| `usage_limit` | `integer` | Global usage cap — null for unlimited |
+| `usage_count` | `integer` | Incremented atomically by `increment_promotion_usage` RPC |
+| `usage_limit_per_customer` | `integer` | Per-customer cap |
+| `starts_at` / `ends_at` | `timestamp` | Validity window |
+
+Note: `buy_x_get_y` is defined in the schema but not yet implemented in `cart-checkout`.
+
+### promotion_rules
+
+Rules that must pass for the promotion to apply.
+
+| Type | Value | Behaviour |
+| --- | --- | --- |
+| `cart_total` | Minimum subtotal in cents | Promotion only applies if cart subtotal >= value |
+| `customer_group` | Customer group ID | Promotion only applies to customers in that group |
+
+### promotion_usages
+
+Audit log of which customer used which promotion on which order.
+
+## tax
+
+**File:** `tax.ts`
+
+### tax_regions
+
+A tax region maps a country (and optionally a province) to a set of tax rates.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `country_code` | `varchar(2)` | ISO 3166-1 alpha-2 |
+| `province_code` | `varchar(10)` | Optional — province-specific rates take precedence |
+
+### tax_rates
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `rate` | `numeric` | Decimal rate, e.g. `0.15` for 15% |
+| `is_default` | `boolean` | The default rate for the tax region |
+| `name` | `varchar(100)` | e.g. `VAT`, `GST` |
+
+Tax calculation in `cart-checkout` matches by `country_code` first, then prefers a `province_code` match if available.
+
+## fulfillment
+
+**File:** `fulfillment.ts`
+
+### shipping_profiles
+
+Groups of products that share the same shipping rules.
+
+### fulfillment_providers
+
+External fulfillment providers. `is_installed` controls visibility.
+
+### shipping_options
+
+Available shipping methods shown to customers at checkout.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `price_type` | `shipping_price_type` | `flat_rate` or `calculated` |
+| `amount` | `integer` | Flat rate amount in smallest currency unit |
+| `min_subtotal` | `integer` | Only shown if cart subtotal >= this value |
+| `is_active` | `boolean` | |
+
+## cart
+
+**File:** `cart.ts`
+
+### carts
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `customer_id` | `uuid` | FK → `customers.id` CASCADE — anonymous customers supported |
+| `status` | `cart_status` | `active`, `completed`, `abandoned` |
+| `shipping_address` | `jsonb` | Address snapshot |
+| `billing_address` | `jsonb` | Address snapshot |
+| `promotion_codes` | `jsonb` | Array of applied promotion code strings |
+| `subtotal` / `tax_total` / `shipping_total` / `discount_total` / `total` | `integer` | Written by `checkout_cart` RPC at completion. **Do not read these for pre-checkout display** — use `commerce.cart.get()` instead which computes totals live from line items. |
+
+### cart_line_items
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `variant_id` | `uuid` | FK → `product_variants.id` SET NULL on delete |
+| `product_id` | `uuid` | FK → `products.id` SET NULL on delete |
+| `title` / `subtitle` / `thumbnail` | | Snapshotted at time of add — survives product deletion |
+| `unit_price` | `integer` | Snapshotted at time of add — price changes don't affect open carts |
+| `subtotal` | `integer` | `unit_price * quantity` |
+
+### cart_shipping_methods
+
+The selected shipping method. `price` is snapshotted at time of selection.
+
+## orders
+
+**File:** `orders.ts`
+
+### orders
+
+Created by `checkout_cart` RPC. Immutable from the customer's perspective after creation.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `display_id` | `integer` | Auto-incrementing human-readable order number |
+| `status` | `order_status` | `pending`, `processing`, `completed`, `cancelled`, `requires_action` |
+| `payment_status` | `order_payment_status` | `pending`, `captured`, `refunded`, etc. |
+| `fulfillment_status` | `order_fulfillment_status` | `not_fulfilled`, `fulfilled`, `shipped`, etc. |
+| `shipping_address` / `billing_address` | `jsonb` | Address snapshots at time of checkout |
+
+### order_line_items
+
+Copied from `cart_line_items` at checkout. `variant_id` and `product_id` use `SET NULL` on delete — the historical record survives product deletion because title and price are snapshotted.
+
+### order_fulfillments
+
+Records physical dispatch of items. One order can have multiple fulfillments.
+
+### order_returns / order_return_items
+
+Return requests from customers.
+
+### order_refunds
+
+Refund records. `reason` is one of `discount`, `return`, `swap`, `claim`, `other`.
+
+## payments
+
+**File:** `payments.ts`
+
+### payment_collections
+
+One payment collection per order. Tracks overall payment status and captured amount.
+
+### payment_sessions
+
+One session per payment attempt. `provider_session_id` links to the external provider (e.g. Stripe PaymentIntent ID). `data` stores provider-specific data returned to the client (e.g. `clientSecret`).
+
+## sales_channels
+
+**File:** `sales_channels.ts`
+
+Sales channels allow you to control which products are available in which context — e.g. web, mobile, B2B.
+
+## admin_users
+
+**File:** `admin_users.ts`
+
+### admin_users
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `user_id` | `uuid` | FK → `auth.users.id` — unique |
+| `role` | `admin_role` | `admin`, `manager`, `support` |
+| `is_active` | `boolean` | Deactivated admins lose access immediately |
+
+### admin_invitations
+
+New admins are onboarded via invitation only — there is no direct create flow. The invitation stores a `token` and `expires_at`. The `admin-send-invite` edge function emails the invite link, and `admin-accept-invite` handles redemption.

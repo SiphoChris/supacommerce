@@ -1,0 +1,87 @@
+---
+title: Environment Variables
+description: A complete reference of all environment variables used by supacommerce.
+---
+
+# Environment Variables
+
+supacommerce uses two categories of environment variables — local `.env` variables for your app and Drizzle, and Supabase edge function secrets for the server-side functions.
+
+The CLI copies a `.env.example` file into your project. Rename it to `.env` and fill in your values.
+
+## Local `.env`
+
+These live in your project's `.env` file and are used by Drizzle and your frontend apps.
+
+### Base
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | Postgres connection string for Drizzle migrations. Found in Supabase under **Settings → Database → Connection string → URI**. |
+
+### Dashboard app
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `VITE_SUPABASE_URL` | Yes | Your Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Yes | Your Supabase anon key — safe to expose client-side |
+| `VITE_SUPABASE_SERVICE_ROLE_KEY` | Seed script only | Service role key — bypasses RLS. Used only by `pnpm seed:admin`. Never expose client-side. |
+| `VITE_ADMIN_EMAIL` | Seed script only | Email for the first admin user |
+| `VITE_ADMIN_PASSWORD` | Seed script only | Password for the first admin user |
+| `VITE_ADMIN_FIRST_NAME` | Seed script only | First name for the first admin user |
+| `VITE_ADMIN_LAST_NAME` | Seed script only | Last name for the first admin user |
+
+### Storefront app
+
+The storefront uses the same two vars as the dashboard:
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `VITE_SUPABASE_URL` | Yes | Same value as dashboard |
+| `VITE_SUPABASE_ANON_KEY` | Yes | Same value as dashboard |
+
+## Supabase edge function secrets
+
+These are set via the Supabase CLI and are available to all edge functions as `Deno.env.get("KEY")`.
+
+```bash
+supabase secrets set \
+  RESEND_API_KEY=re_... \
+  RESEND_FROM="Your Store <orders@yourdomain.com>" \
+  EMAIL_FROM="orders@yourdomain.com" \
+  DASHBOARD_URL="https://your-dashboard-url.com" \
+  ENVIRONMENT="development"
+```
+
+| Variable | Required | Used by | Description |
+| --- | --- | --- | --- |
+| `RESEND_API_KEY` | Yes | `order-confirmed`, `admin-send-invite` | Your [Resend](https://resend.com) API key for sending emails |
+| `RESEND_FROM` | Yes | `admin-send-invite` | From address for invitation emails, e.g. `Your Store <orders@yourdomain.com>` |
+| `EMAIL_FROM` | Yes | `order-confirmed` | From address for order confirmation emails |
+| `DASHBOARD_URL` | Yes | `admin-send-invite` | URL of your admin dashboard — used to build the accept invitation link |
+| `ENVIRONMENT` | Yes | `payment-webhook` | Set to `development` to allow the payment webhook to run without signature verification. Remove or change this when you implement signature verification in production. |
+
+### Auto-injected by Supabase
+
+These are automatically available in all edge functions — you do not set them manually:
+
+| Variable | Description |
+| --- | --- |
+| `SUPABASE_URL` | Your Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key — bypasses RLS |
+| `SUPABASE_ANON_KEY` | Anon key |
+
+## Payment provider secrets
+
+When you wire in your payment provider in `supabase/functions/cart-checkout/index.ts` and `supabase/functions/payment-webhook/index.ts`, you'll need to add provider-specific secrets. Using Stripe as an example:
+
+```bash
+supabase secrets set \
+  STRIPE_SECRET_KEY=sk_live_... \
+  STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+| Variable | Description |
+| --- | --- |
+| `STRIPE_SECRET_KEY` | Stripe secret key for creating payment intents |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret for verifying webhook events |

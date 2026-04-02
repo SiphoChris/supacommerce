@@ -1,0 +1,141 @@
+---
+title: Postgres Functions
+description: The atomic Postgres RPC functions included with supacommerce.
+---
+
+# Postgres Functions
+
+`supabase/functions.sql` contains 5 Postgres functions that handle operations requiring atomicity — where a partial failure would leave your database in an inconsistent state.
+
+Apply by pasting the file into the Supabase SQL Editor. All functions are safe to re-run — they use `create or replace function`.
+
+All functions run with `SECURITY DEFINER` and `set search_path = ''` — they bypass RLS and use fully qualified table names. Only call them from trusted server-side code (edge functions using the service role key).
+
+---
+
+## checkout_cart
+
+Atomically converts an active cart into an order.
+
+Called by `cart-checkout` edge function.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `p_cart_id` | `uuid` | required | The cart to check out |
+| `p_discount_total` | `integer` | `0` | Total discount in smallest currency unit |
+| `p_tax_total` | `integer` | `0` | Total tax |
+| `p_shipping_total` | `integer` | `0` | Total shipping |
+| `p_billing_address` | `jsonb` | `null` | Billing address — falls back to cart's billing address |
+
+### Returns
+
+`uuid` — the new order ID.
+
+### Steps (all-or-nothing)
+
+1. Lock the cart row with `FOR UPDATE` — prevents concurrent checkouts of the same cart
+2. Validate the cart is `active` and not already completed
+3. Compute subtotal from `cart_line_items`
+4. Create the `orders` row
+5. Copy `cart_line_items` to `order_line_items` — including `product_id` snapshot
+6. Create a `payment_collections` row
+7. Mark the cart as `completed`
+
+### Error codes
+
+| Code | Condition |
+| --- | --- |
+| `P0002` | Cart not found or already completed |
+
+---
+
+## confirm_order
+
+Atomically marks an order as processing after payment is captured.
+
+Called by `order-confirmed` edge function.
+
+### Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `p_order_id` | `uuid` | The order to confirm |
+| `p_payment_session_id` | `uuid` | The payment session that was captured |
+
+### Steps (all-or-nothing)
+
+1. Lock the order row with `FOR UPDATE`
+2. Validate the order status is `pending` or `requires_action`
+3. Update order status → `processing`, payment status → `captured`
+4. Update payment session status → `captured`
+5. Update payment collection status → `captured`
+6. For each line item — upgrade pending inventory reservation to `confirmed`. If no pending reservation exists (e.g. variant had no inventory tracking at checkout), create a confirmed reservation with a stock check.
+
+### Error codes
+
+| Code | Condition |
+| --- | --- |
+| `P0002` | Order not found |
+| `P0001` | Order already confirmed or cancelled |
+| `P0003` | Insufficient stock at confirmation time |
+
+---
+
+## reserve_inventory
+
+Creates a soft inventory hold before payment is captured. Called by `cart-checkout` for each line item.
+
+### Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `p_inventory_item_id` | `uuid` | The inventory item to reserve |
+| `p_location_id` | `uuid` | The stock location |
+| `p_line_item_id` | `uuid` | The cart line item this reservation is for |
+| `p_quantity` | `integer` | Quantity to reserve |
+
+### Returns
+
+`boolean` — `true` if reservation succeeded, `false` if insufficient stock.
+
+### Behaviour
+
+Locks the `inventory_levels` row with `FOR UPDATE`, checks `quantity_available >= p_quantity`, creates an `inventory_reservations` row with `status = 'pending'`, and decrements `quantity_available`.
+
+Returns `false` (rather than raising an exception) so that `cart-checkout` can release all previous reservations and return a clean error to the customer.
+
+---
+
+## release_inventory_reservation
+
+Releases a pending reservation and restores available quantity. Called by `cart-checkout` when any reservation in a batch fails, and by `payment-webhook` when payment fails.
+
+### Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `p_reservation_id` | `uuid` | The reservation to release |
+
+### Behaviour
+
+Only acts on reservations with `status = 'pending'`. If the reservation is already `confirmed` or `released`, the function is a no-op — safe to call multiple times.
+
+Marks the reservation as `released` and restores `quantity_available` on the `inventory_levels` row.
+
+---
+
+## increment_promotion_usage
+
+Atomically increments `usage_count` on a promotion by 1. Called by `cart-checkout` after recording a `promotion_usages` row.
+
+### Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `p_promotion_id` | `uuid` | The promotion to increment |
+
+### Why a dedicated RPC
+
+A read-modify-write in application code (`count = count + 1` after a SELECT) is susceptible to race conditions under concurrent checkouts. A single atomic `UPDATE` in Postgres eliminates this entirely.
