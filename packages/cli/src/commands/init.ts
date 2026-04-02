@@ -409,7 +409,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
 
   console.log(
     chalk.dim("  Read the full docs at ") +
-      chalk.white("https://github.com/supacommerce/supacommerce"),
+      chalk.white("https://github.com/SiphoChris/supacommerce"),
   );
   console.log();
 }
