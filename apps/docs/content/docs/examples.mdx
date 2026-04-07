@@ -1,0 +1,152 @@
+---
+title: Examples
+description: Reference implementations showing how to build with supacommerce.
+---
+
+# Examples
+
+Two reference implementations are included in the supacommerce monorepo. They are kitchen sinks — complete working apps that show how to build a storefront and an admin dashboard using supacommerce. Browse the source, copy what you need, and make it yours.
+
+---
+
+## Storefront
+
+A complete customer-facing storefront built with Vite, React, and Tailwind CSS v4.
+
+**Source:** [`apps/storefront`](https://github.com/SiphoChris/supacommerce/tree/main/apps/storefront)
+
+**Live demo:** coming soon
+
+### Stack
+
+- Vite + React
+- Tailwind CSS v4
+- `@supacommerce/client`
+- `@supabase/supabase-js`
+
+### What's included
+
+| File | Description |
+| --- | --- |
+| `src/lib/commerce.ts` | `@supacommerce/client` instance |
+| `src/lib/supabase.ts` | Supabase client instance |
+| `src/lib/auth.tsx` | Auth context — sign in, sign up, sign out, session |
+| `src/lib/cart.tsx` | Cart context — addItem, removeItem, updateItem, checkout |
+| `src/pages/HomePage.tsx` | Product grid with loading skeletons |
+| `src/pages/ProductPage.tsx` | Product detail, variant selector, add to cart |
+| `src/pages/CheckoutPage.tsx` | Shipping address, shipping method, promo code, order submission |
+| `src/pages/OrderConfirmPage.tsx` | Order summary after checkout |
+| `src/pages/LoginPage.tsx` | Sign in / sign up toggle |
+| `src/pages/AccountPage.tsx` | Orders list, profile edit, address management |
+| `src/components/CartDrawer.tsx` | Slide-in cart panel with qty controls and totals |
+| `src/components/ProductCard.tsx` | Product card for the grid |
+
+### Running locally
+
+```bash
+cd apps/storefront
+cp .env.example .env
+# Fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+pnpm install
+pnpm dev
+```
+
+### Cart context
+
+The `cart.tsx` context wraps all cart operations and keeps the cart state in sync:
+
+```typescript
+import { useCart } from "@/lib/cart";
+
+const { cart, addItem, removeItem, updateItem, applyPromotion } = useCart();
+
+await addItem({ variantId: "...", quantity: 1 });
+```
+
+### Anonymous auth
+
+The storefront uses `supabase.auth.signInAnonymously()` on load if no session exists — this creates a real Supabase auth user with no email, which allows cart RLS policies to work without requiring the customer to register. When the customer signs up, Supabase upgrades the anonymous user and the cart is preserved.
+
+---
+
+## Dashboard
+
+A complete admin dashboard built with React Admin and MUI v7.
+
+**Source:** [`apps/dashboard`](https://github.com/SiphoChris/supacommerce/tree/main/apps/dashboard)
+
+**Live demo:** coming soon
+
+**Default credentials:**
+```
+Email:    admin@yourdomain.com
+Password: (set by your seed:admin script)
+```
+
+### Stack
+
+- Vite + React
+- [React Admin](https://marmelab.com/react-admin/)
+- MUI v7
+- [ra-supabase](https://github.com/marmelab/ra-supabase)
+
+### What's included
+
+The dashboard provides full CRUD for all supacommerce resources:
+
+| Section | Resources |
+| --- | --- |
+| Orders | Orders, fulfillments, returns, refunds |
+| Products | Products, variants, categories, collections, tags, images |
+| Customers | Customers, customer groups |
+| Inventory | Inventory items, levels, stock locations |
+| Pricing | Prices, price sets, price lists |
+| Promotions | Promotions, promotion rules |
+| Payments | Payment collections, payment sessions (read-only) |
+| Shipping | Shipping options, profiles, fulfillment providers |
+| Sales Channels | Sales channels |
+| Regions & Geo | Currencies, regions, countries |
+| Tax | Tax regions, tax rates |
+| Admin | Admin users, invitations |
+
+### Running locally
+
+```bash
+cd apps/dashboard
+cp .env.example .env
+# Fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+pnpm install
+pnpm dev
+```
+
+### Admin invitation flow
+
+New admins are onboarded via invitation — there is no direct create flow. From the dashboard:
+
+1. Go to **Admin → Invitations → Create**
+2. Enter the new admin's email and role
+3. The `admin-send-invite` edge function sends them an email with an accept link
+4. They follow the link, set their name and password, and the `admin-accept-invite` edge function creates their auth user and `admin_users` row
+
+### Critical dataProvider config
+
+The `currencies` table uses `code` as its primary key (not a UUID). The ra-supabase dataProvider must be told about this or all currency operations will 400:
+
+```typescript
+// apps/dashboard/src/App.tsx
+const dataProvider = supabaseDataProvider({
+  instanceUrl,
+  apiKey,
+  supabaseClient,
+  primaryKeys: new Map([["currencies", ["code"]]]),
+});
+```
+
+### Product image uploads
+
+The `ProductImageManager` component in `src/admin/resources/products/ProductImageManager.tsx` handles image uploads via the `storage-upload` edge function. Images are stored in the `products` Supabase Storage bucket and URLs are saved to `product_images`.
+
+Before using the dashboard for the first time, create the storage buckets in your Supabase project:
+
+- **`products`** — public bucket for product images and thumbnails
+- **`avatars`** — public bucket for admin user avatars
